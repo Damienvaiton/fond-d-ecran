@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="style.css" />
+		<title>Nouveau Onglet</title>
+	</head>
+	<body>
+		<div id="overlay"></div>
+		<div id="bg"></div>
+
+		<!-- Modal sélection profil -->
+		<div id="user-selector" class="modal">
+			<div class="modal-content">
+				<h2>Choisir un profil</h2>
+				<div class="user-buttons"></div>
+			</div>
+		</div>
+
+		<!-- Modal ajout raccourci -->
+		<div id="shortcut-modal" class="modal hidden">
+			<div class="modal-content">
+				<h2>Ajouter un raccourci</h2>
+				<div class="shortcut-form">
+					<input
+						type="text"
+						id="shortcut-name"
+						placeholder="Nom (ex: YouTube)"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+					<input
+						type="text"
+						id="shortcut-url"
+						placeholder="URL (ex: https://youtube.com)"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+				</div>
+				<div class="modal-actions">
+					<button id="shortcut-cancel">Annuler</button>
+					<button id="shortcut-confirm">Ajouter</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Modal config -->
+		<div id="config-modal" class="modal hidden">
+			<div class="modal-content">
+				<h2>Configuration</h2>
+				<div class="config-section">
+					<label>Nom du profil</label>
+					<div class="config-row">
+						<input
+							type="text"
+							id="config-profile-name"
+							autocomplete="off"
+							spellcheck="false"
+						/>
+						<button id="config-save-name">Sauvegarder</button>
+					</div>
+				</div>
+				<div class="modal-actions">
+					<button id="config-close">Fermer</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Horloge -->
+		<div id="clock-wrapper">
+			<div id="date-left" class="led-display"></div>
+			<div id="clock-container">
+				<svg
+					id="clock-svg"
+					viewBox="0 0 200 200"
+					xmlns="http://www.w3.org/2000/svg"
+					style="
+						position: absolute;
+						top: 0;
+						left: 0;
+						width: 100%;
+						height: 100%;
+						z-index: 11;
+					"
+				>
+					<defs>
+						<filter id="shadow" x="-20%" y="-20%" width="150%" height="150%">
+							<feGaussianBlur in="SourceAlpha" stdDeviation="1.2" />
+							<feOffset dx="1" dy="1" result="offsetblur" />
+							<feComponentTransfer>
+								<feFuncA type="linear" slope="0.6" />
+							</feComponentTransfer>
+							<feMerge>
+								<feMergeNode />
+								<feMergeNode in="SourceGraphic" />
+							</feMerge>
+						</filter>
+					</defs>
+					<g id="hour-g" filter="url(#shadow)">
+						<path
+							d="M100,40 C101.5,46 104,57 104,65 C104,70 102.5,73 102,74.5 L102,99 L98,99 L98,74.5 C97.5,73 96,70 96,65 C96,57 98.5,46 100,40 Z"
+							fill="#0d0d0d"
+						/>
+					</g>
+					<g id="minute-g" filter="url(#shadow)">
+						<path d="M100.8,20 L101.5,99 L98.5,99 L99.2,20 Z" fill="#0d0d0d" />
+					</g>
+					<circle cx="100" cy="100" r="3" fill="#0d0d0d" />
+					<circle cx="100" cy="100" r="1.2" fill="#888" />
+				</svg>
+			</div>
+			<div id="date-right" class="led-display"></div>
+		</div>
+
+		<!-- Bandeau événement TS -->
+		<div id="ts-event-banner" class="hidden"></div>
+
+		<!-- Contenu principal -->
+		<div class="content">
+			<div id="welcome-msg"></div>
+			<div class="search-container">
+				<div class="search-wrapper">
+					<div class="search-icon">
+						<svg viewBox="0 0 24 24" width="20" height="20">
+							<path
+								fill="currentColor"
+								d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+							/>
+						</svg>
+					</div>
+					<form action="https://www.google.com/search" method="get">
+						<input
+							type="text"
+							name="q"
+							id="search-input"
+							placeholder="Rechercher sur Google..."
+							autocomplete="off"
+							spellcheck="false"
+						/>
+					</form>
+				</div>
+			</div>
+			<div id="shortcuts" class="shortcuts-container"></div>
+		</div>
+
+		<!-- Boutons bas de page -->
+		<button id="switch-profile-btn" title="Changer de profil">⇄</button>
+		<button id="add-shortcut-btn" title="Ajouter un raccourci">+</button>
+		<button id="config-btn" title="Configuration">⚙</button>
+
+		<!-- Menu stores artistes -->
+		<div id="artist-stores"></div>
+
+		<script src="script.js"></script>
+	</body>
+</html>

@@ -1,0 +1,672 @@
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    background-color: #000;
+}
+
+#bg {
+    position: fixed;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.6));
+    z-index: 1;
+}
+
+/* Horloge */
+#clock-wrapper {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    z-index: 10;
+}
+
+#clock-container {
+    width: 200px;
+    height: 200px;
+    flex-shrink: 0;
+    background: url('imgs/hour.png') no-repeat center;
+    background-size: contain;
+    position: relative;
+}
+
+.led-display {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2rem;
+    color: #e01010;
+    text-shadow: 0 0 6px #ff2020, 0 0 14px #ff0000, 0 0 28px rgba(255, 0, 0, 0.4);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+/* Message de bienvenue */
+#welcome-msg {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.6rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    margin-bottom: 28px;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    animation: welcomeIn 0.8s ease forwards;
+    opacity: 0;
+}
+
+@keyframes welcomeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Boutons bas de page */
+#switch-profile-btn,
+#add-shortcut-btn,
+#config-btn {
+    position: fixed;
+    bottom: 24px;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    padding: 0;
+    line-height: 1;
+    width: 42px;
+    height: 42px;
+}
+
+#switch-profile-btn {
+    left: 24px;
+    font-size: 1.3rem;
+}
+
+#add-shortcut-btn {
+    left: 78px;
+    font-size: 1.5rem;
+}
+
+#config-btn {
+    left: 132px;
+    font-size: 1.1rem;
+}
+
+#switch-profile-btn:hover {
+    transform: rotate(180deg);
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#add-shortcut-btn:hover {
+    transform: rotate(90deg);
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+#config-btn:hover {
+    transform: rotate(60deg);
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Recherche */
+.search-container {
+    width: 100%;
+    max-width: 550px;
+    margin-bottom: 40px;
+    z-index: 2;
+}
+
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    padding: 0 25px;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.search-wrapper:focus-within {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: scale(1.04);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.search-icon {
+    color: rgba(255, 255, 255, 0.5);
+    margin-right: 15px;
+    display: flex;
+}
+
+#search-input {
+    width: 100%;
+    height: 60px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 300;
+}
+
+#search-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Raccourcis */
+.content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.shortcuts-container {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+@keyframes shortcutIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.shortcut-item {
+    text-decoration: none;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s ease;
+    opacity: 0;
+    animation: shortcutIn 0.5s ease forwards;
+    position: relative;
+    cursor: grab;
+}
+
+.shortcut-item:hover {
+    transform: translateY(-5px);
+}
+
+.shortcut-item.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.shortcut-item.drag-over {
+    transform: scale(1.1);
+}
+
+.icon-wrapper {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.icon-wrapper img {
+    width: 32px;
+    height: 32px;
+}
+
+.shortcut-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    background: rgba(255, 60, 60, 0.85);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.65rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    padding: 0;
+    line-height: 1;
+    z-index: 10;
+}
+
+.shortcut-item:hover .shortcut-remove {
+    opacity: 1;
+}
+
+/* Modales */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(15px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 40px;
+    border-radius: 30px;
+    text-align: center;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 320px;
+}
+
+.modal-content h2 {
+    margin: 0 0 8px;
+}
+
+.user-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.user-buttons button {
+    padding: 12px 25px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    background: white;
+    transition: transform 0.2s;
+}
+
+.user-buttons button:hover {
+    transform: scale(1.05);
+}
+
+/* Formulaire raccourci */
+.shortcut-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.shortcut-form input,
+.config-row input {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: white;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.shortcut-form input:focus,
+.config-row input:focus {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.shortcut-form input::placeholder,
+.config-row input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.modal-actions button {
+    padding: 10px 24px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.modal-actions button:hover {
+    transform: scale(1.05);
+}
+
+#shortcut-cancel,
+#config-close {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+#shortcut-confirm {
+    background: white;
+    color: #111;
+}
+
+/* Config */
+.config-section {
+    text-align: left;
+    margin-top: 20px;
+}
+
+.config-section label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.config-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.config-row input {
+    flex: 1;
+}
+
+#config-save-name {
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.85rem;
+    background: white;
+    color: #111;
+    white-space: nowrap;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+#config-save-name:hover {
+    transform: scale(1.05);
+}
+
+/* Bandeau événements */
+#ts-event-banner {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 12px 24px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.88rem;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    animation: bannerIn 0.6s ease forwards;
+    opacity: 0;
+}
+
+#ts-event-banner span {
+    display: block;
+}
+
+@keyframes bannerIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* =====================
+   ARTIST STORES
+   ===================== */
+
+#artist-stores {
+    position: fixed;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 200;
+}
+
+/* Pill artiste */
+.artist-pill {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Avatar = bouton principal */
+.artist-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    z-index: 2;
+}
+
+.artist-pill:hover .artist-avatar,
+.artist-pill.open .artist-avatar {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: scale(1.08);
+}
+
+/* Label nom au hover */
+.artist-label {
+    position: absolute;
+    left: 50px;
+    background: rgba(12, 12, 18, 0.9);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 5px 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.artist-pill:hover .artist-label {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.artist-pill.open .artist-label {
+    opacity: 0;
+}
+
+/* Dropdown */
+.store-dropdown {
+    position: absolute;
+    left: 52px;
+    top: 50%;
+    transform: translateY(-50%) translateX(-8px);
+    min-width: 240px;
+    background: rgba(10, 10, 16, 0.96);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.artist-pill.open .store-dropdown {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(-50%) translateX(0);
+}
+
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 6px;
+}
+
+.dropdown-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+}
+
+/* Bouton "Tout ouvrir" */
+.open-all-btn {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.04em;
+}
+
+.open-all-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Liens store */
+.store-link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 10px;
+    border-radius: 11px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.855rem;
+    transition: all 0.16s ease;
+}
+
+.store-link:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: white;
+}
+
+.store-link:hover .store-arrow {
+    transform: translateX(3px);
+    opacity: 1;
+}
+
+.store-flag {
+    width: 26px;
+    height: 18px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+}
+
+.store-label {
+    flex: 1;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.store-arrow {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.22);
+    opacity: 0;
+    transition: all 0.16s ease;
+}
