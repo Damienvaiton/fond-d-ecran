@@ -154,9 +154,15 @@ html {
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 30px;
-    padding: 0 25px;
+    padding: 0 10px 0 25px;
     transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.search-wrapper form {
+    flex: 1;
+    display: flex;
+    min-width: 0;
 }
 
 .search-wrapper:focus-within {
@@ -173,6 +179,7 @@ html {
 }
 
 #search-input {
+    flex: 1;
     width: 100%;
     height: 60px;
     background: transparent;
@@ -181,6 +188,7 @@ html {
     color: white;
     font-size: 1.1rem;
     font-weight: 300;
+    min-width: 0;
 }
 
 #search-input::placeholder {
@@ -669,4 +677,472 @@ html {
     color: rgba(255, 255, 255, 0.22);
     opacity: 0;
     transition: all 0.16s ease;
+}
+
+/* =====================
+   CONFIG TABS
+   ===================== */
+
+.config-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 16px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 0;
+}
+
+.config-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: -1px;
+}
+
+.config-tab:hover {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.config-tab.active {
+    color: white;
+    border-bottom-color: white;
+}
+
+.config-tab-content {
+    margin-top: 18px;
+}
+
+/* =====================
+   ARTISTS CONFIG
+   ===================== */
+
+#artists-config-list {
+    max-height: 340px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+    padding-right: 4px;
+}
+
+.artists-config-category {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.28);
+    padding: 10px 0 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.artists-config-artist {
+    margin-bottom: 4px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.artists-config-artist-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    transition: background 0.15s;
+}
+
+.artists-config-artist-header:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.artists-config-artist-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.artists-config-initials {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.artists-config-name {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.artists-config-expand {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.artists-config-expand:hover {
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Stores list */
+.artists-config-stores {
+    background: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.artists-config-store-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 14px 8px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: background 0.12s;
+}
+
+.artists-config-store-row:last-child {
+    border-bottom: none;
+}
+
+.artists-config-store-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.artists-config-store-label {
+    flex: 1;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.store-flag-mini {
+    width: 20px;
+    height: 14px;
+    object-fit: cover;
+    border-radius: 3px;
+    opacity: 0.7;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* =====================
+   TOGGLE SWITCH
+   ===================== */
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    transition: background 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 50%;
+    transition: all 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+    transform: translateX(16px) translateY(-50%);
+    background: white;
+}
+
+.toggle-switch-sm {
+    width: 30px;
+    height: 17px;
+}
+
+.toggle-switch-sm .toggle-slider::before {
+    width: 11px;
+    height: 11px;
+}
+
+.toggle-switch-sm input:checked+.toggle-slider::before {
+    transform: translateX(13px) translateY(-50%);
+}
+
+/* Agrandir la modale config pour l'onglet artistes */
+#config-modal .modal-content {
+    min-width: 360px;
+    max-width: 420px;
+    width: 90vw;
+}
+
+/* =====================
+   LENS BUTTON
+   ===================== */
+
+#lens-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-left: 4px;
+    transition: all 0.2s ease;
+}
+
+#lens-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* =====================
+   LENS MODAL
+   ===================== */
+
+.lens-modal-content {
+    background: rgba(28, 28, 36, 0.97);
+    padding: 28px 28px 24px;
+    border-radius: 24px;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 420px;
+    max-width: 480px;
+    width: 90vw;
+    text-align: left;
+}
+
+.lens-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.lens-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.lens-close-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: all 0.15s;
+    line-height: 1;
+}
+
+.lens-close-btn:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.lens-dropzone {
+    border: 1.5px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    min-height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+}
+
+.lens-dropzone:hover,
+.lens-dropzone.drag-active {
+    border-color: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.lens-drop-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.lens-drop-icon {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.lens-drop-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.5;
+}
+
+.lens-upload-link {
+    color: #6fa8dc;
+    text-decoration: underline;
+    cursor: pointer;
+    pointer-events: all;
+}
+
+.lens-upload-link:hover {
+    color: #90bfec;
+}
+
+.lens-preview {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 14px;
+}
+
+.lens-preview.hidden {
+    display: none;
+}
+
+.lens-preview img {
+    max-height: 126px;
+    max-width: calc(100% - 32px);
+    border-radius: 8px;
+    object-fit: contain;
+}
+
+.lens-preview-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(220, 50, 50, 0.9);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    width: 24px;
+    height: 24px;
+    font-size: 0.65rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.lens-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 0;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+}
+
+.lens-divider::before,
+.lens-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.lens-url-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.lens-url-row input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50px;
+    padding: 10px 18px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.lens-url-row input:focus {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.lens-url-row input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+#lens-search-btn {
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.88rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #111;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+#lens-search-btn:hover {
+    background: white;
+    transform: scale(1.04);
 }

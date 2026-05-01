@@ -54,18 +54,32 @@
 		<div id="config-modal" class="modal hidden">
 			<div class="modal-content">
 				<h2>Configuration</h2>
-				<div class="config-section">
-					<label>Nom du profil</label>
-					<div class="config-row">
-						<input
-							type="text"
-							id="config-profile-name"
-							autocomplete="off"
-							spellcheck="false"
-						/>
-						<button id="config-save-name">Sauvegarder</button>
+				<div class="config-tabs">
+					<button class="config-tab active" data-tab="profil">Profil</button>
+					<button class="config-tab" data-tab="artistes">Artistes</button>
+				</div>
+
+				<!-- Onglet Profil -->
+				<div class="config-tab-content" id="tab-profil">
+					<div class="config-section">
+						<label>Nom du profil</label>
+						<div class="config-row">
+							<input
+								type="text"
+								id="config-profile-name"
+								autocomplete="off"
+								spellcheck="false"
+							/>
+							<button id="config-save-name">Sauvegarder</button>
+						</div>
 					</div>
 				</div>
+
+				<!-- Onglet Artistes -->
+				<div class="config-tab-content hidden" id="tab-artistes">
+					<div id="artists-config-list"></div>
+				</div>
+
 				<div class="modal-actions">
 					<button id="config-close">Fermer</button>
 				</div>
@@ -144,6 +158,41 @@
 							spellcheck="false"
 						/>
 					</form>
+					<button id="lens-btn" title="Rechercher une image avec Google Lens">
+						<svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+							<path
+								d="M7 2H4a2 2 0 0 0-2 2v3"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+							/>
+							<path
+								d="M17 2h3a2 2 0 0 1 2 2v3"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+							/>
+							<path
+								d="M7 22H4a2 2 0 0 1-2-2v-3"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+							/>
+							<path
+								d="M17 22h3a2 2 0 0 0 2-2v-3"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+							/>
+							<circle
+								cx="12"
+								cy="12"
+								r="3.5"
+								stroke="currentColor"
+								stroke-width="2"
+							/>
+						</svg>
+					</button>
 				</div>
 			</div>
 			<div id="shortcuts" class="shortcuts-container"></div>
@@ -153,6 +202,74 @@
 		<button id="switch-profile-btn" title="Changer de profil">⇄</button>
 		<button id="add-shortcut-btn" title="Ajouter un raccourci">+</button>
 		<button id="config-btn" title="Configuration">⚙</button>
+
+		<!-- Modal Google Lens -->
+		<div id="lens-modal" class="modal hidden">
+			<div class="modal-content lens-modal-content">
+				<div class="lens-header">
+					<h2>Rechercher une image</h2>
+					<button id="lens-close" class="lens-close-btn">✕</button>
+				</div>
+				<div id="lens-dropzone" class="lens-dropzone">
+					<input type="file" id="lens-file-input" accept="image/*" hidden />
+					<div class="lens-drop-inner" id="lens-drop-inner">
+						<div class="lens-drop-icon">
+							<svg viewBox="0 0 48 48" width="48" height="48" fill="none">
+								<rect
+									x="6"
+									y="10"
+									width="36"
+									height="28"
+									rx="4"
+									stroke="currentColor"
+									stroke-width="2.5"
+									opacity="0.35"
+								/>
+								<circle
+									cx="18"
+									cy="20"
+									r="3.5"
+									stroke="currentColor"
+									stroke-width="2"
+									opacity="0.5"
+								/>
+								<path
+									d="M6 32l10-10 7 7 5-5 8 8"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									opacity="0.5"
+								/>
+							</svg>
+						</div>
+						<p class="lens-drop-text">
+							Faites glisser une image ici<br />ou
+							<span class="lens-upload-link" id="lens-upload-link"
+								>importez un fichier</span
+							>
+						</p>
+					</div>
+					<div id="lens-preview" class="lens-preview hidden">
+						<img id="lens-preview-img" src="" alt="" />
+						<button class="lens-preview-remove" id="lens-preview-remove">
+							✕
+						</button>
+					</div>
+				</div>
+				<div class="lens-divider"><span>OU</span></div>
+				<div class="lens-url-row">
+					<input
+						type="text"
+						id="lens-url-input"
+						placeholder="Coller le lien de l'image"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+					<button id="lens-search-btn">Rechercher</button>
+				</div>
+			</div>
+		</div>
 
 		<!-- Menu stores artistes -->
 		<div id="artist-stores"></div>

@@ -165,6 +165,187 @@ const profiles = {
 	},
 };
 
+// ---------------------------------------------------------------------------
+// ARTISTES & STORES — tableau unique
+// Ajoute ici tous les artistes, peu importe le profil.
+// category: "store" | "autres"
+// Chaque user peut désactiver des stores individuellement via la config.
+// ---------------------------------------------------------------------------
+const artists = [
+	{
+		name: "Taylor Swift",
+		initials: "TS",
+		category: "store",
+		stores: [
+			{
+				id: "ts_web",
+				label: "Site officiel",
+				flag: "web",
+				url: "https://taylorswift.com",
+			},
+			{
+				id: "ts_fr",
+				label: "Store France",
+				flag: "fr",
+				url: "https://taylorswift-store.fr",
+			},
+			{
+				id: "ts_eu",
+				label: "Store Europe",
+				flag: "eu",
+				url: "https://store.taylorswifteu.com",
+			},
+			{
+				id: "ts_us",
+				label: "Store US",
+				flag: "us",
+				url: "https://store.taylorswift.com",
+			},
+			{
+				id: "ts_uk",
+				label: "Store UK",
+				flag: "uk",
+				url: "https://taylorswift-store.co.uk",
+			},
+		],
+	},
+	{
+		name: "Gracie Abrams",
+		initials: "GA",
+		category: "store",
+		stores: [
+			{
+				id: "ga_fr",
+				label: "Store France",
+				flag: "fr",
+				url: "https://gracieabrams-store.fr",
+			},
+			{
+				id: "ga_eu",
+				label: "Store Europe",
+				flag: "eu",
+				url: "https://shop.gracieabrams.eu",
+			},
+			{
+				id: "ga_de",
+				label: "Store Allemagne",
+				flag: "de",
+				url: "https://gracieabrams.universal-music.de/en",
+			},
+			{
+				id: "ga_uk",
+				label: "Store UK",
+				flag: "uk",
+				url: "https://shopuk.gracieabrams.com",
+			},
+			{
+				id: "ga_us",
+				label: "Store US",
+				flag: "us",
+				url: "https://shop.gracieabrams.com",
+			},
+		],
+	},
+	{
+		name: "Tate McRae",
+		initials: "TM",
+		category: "store",
+		stores: [
+			{
+				id: "tm_eu",
+				label: "Store Europe",
+				flag: "eu",
+				url: "https://tatemcraeeu.store/",
+			},
+			{
+				id: "tm_uk",
+				label: "Store UK",
+				flag: "uk",
+				url: "https://tatemcraeuk.store/",
+			},
+			{
+				id: "tm_us",
+				label: "Store US",
+				flag: "us",
+				url: "https://tatemcrae.store/",
+			},
+		],
+	},
+	{
+		name: "Sabrina Carpenter",
+		initials: "SC",
+		category: "store",
+		stores: [
+			{
+				id: "sc_fr",
+				label: "Store France",
+				flag: "fr",
+				url: "https://storefr.sabrinacarpenter.com/",
+			},
+			{
+				id: "sc_de",
+				label: "Store Allemagne",
+				flag: "de",
+				url: "https://storede.sabrinacarpenter.com/en",
+			},
+			{
+				id: "sc_uk",
+				label: "Store UK",
+				flag: "uk",
+				url: "https://shopuk.sabrinacarpenter.com/",
+			},
+			{
+				id: "sc_us",
+				label: "Store US",
+				flag: "us",
+				url: "https://store.sabrinacarpenter.com/",
+			},
+		],
+	},
+	{
+		name: "Disquaires",
+		initials: "D",
+		category: "store",
+		stores: [
+			{
+				id: "iMusic_fr",
+				label: "iMusic France",
+				flag: "fr",
+				url: "https://www.imusic.fr",
+			},
+		],
+	},
+	{
+		name: "Autres",
+		initials: "A",
+		category: "autres",
+		stores: [
+			{
+				id: "bw",
+				label: "Bad World",
+				flag: "uk",
+				url: "https://bad-world.co.uk/",
+			},
+			{
+				id: "br",
+				label: "Blood Records",
+				flag: "uk",
+				url: "https://blood-records.co.uk/",
+			},
+		],
+	},
+
+	// Exemple d'artiste dans la catégorie "autres" :
+	// {
+	//   name: "Bad World",
+	//   initials: "BW",
+	//   category: "autres",
+	//   stores: [
+	//     { id: "bw_fr", label: "Store FR", flag: "fr", url: "https://..." },
+	//   ],
+	// },
+];
+
 let currentUser = null;
 
 // --- LocalStorage helpers ---
@@ -371,6 +552,7 @@ function loadProfile(name) {
 
 	updateWelcome(name);
 	renderShortcuts(name);
+	renderArtistStores();
 	document.getElementById("search-input").focus();
 }
 
@@ -463,7 +645,34 @@ function initConfigModal() {
 	document.getElementById("config-btn").addEventListener("click", () => {
 		document.getElementById("config-profile-name").value =
 			getDisplayName(currentUser);
+		// Reset onglet actif
+		document
+			.querySelectorAll(".config-tab")
+			.forEach((t) => t.classList.remove("active"));
+		document
+			.querySelectorAll(".config-tab-content")
+			.forEach((t) => t.classList.add("hidden"));
+		document
+			.querySelector(".config-tab[data-tab='profil']")
+			.classList.add("active");
+		document.getElementById("tab-profil").classList.remove("hidden");
 		modal.classList.remove("hidden");
+	});
+
+	// Onglets
+	document.querySelectorAll(".config-tab").forEach((tab) => {
+		tab.addEventListener("click", () => {
+			document
+				.querySelectorAll(".config-tab")
+				.forEach((t) => t.classList.remove("active"));
+			document
+				.querySelectorAll(".config-tab-content")
+				.forEach((t) => t.classList.add("hidden"));
+			tab.classList.add("active");
+			const target = document.getElementById(`tab-${tab.dataset.tab}`);
+			if (target) target.classList.remove("hidden");
+			if (tab.dataset.tab === "artistes") renderArtistsConfig();
+		});
 	});
 
 	document
@@ -874,160 +1083,34 @@ function checkTsEvents() {
 	banner.classList.remove("hidden");
 }
 
-// ---------------------------------------------------------------------------
-// STORES ARTISTES — ajoute ici tes artistes et leurs stores
-// { name, initials, stores: [{ label, flag, url }] }
-// flag = nom du fichier dans imgs/flags/ (sans extension)
-// ---------------------------------------------------------------------------
-const artists = [
-	{
-		name: "Taylor Swift",
-		initials: "TS",
-		stores: [
-			{ label: "Site officiel", flag: "web", url: "https://taylorswift.com" },
-			{
-				label: "Store France",
-				flag: "fr",
-				url: "https://taylorswift-store.fr",
-			},
-			{
-				label: "Store Europe",
-				flag: "eu",
-				url: "https://store.taylorswifteu.com",
-			},
-			{ label: "Store US", flag: "us", url: "https://store.taylorswift.com" },
-			{
-				label: "Store UK",
-				flag: "uk",
-				url: "https://taylorswift-store.co.uk",
-			},
-		],
-	},
-	{
-		name: "Gracie Abrams",
-		initials: "GA",
-		stores: [
-			{
-				label: "Store France",
-				flag: "fr",
-				url: "https://gracieabrams-store.fr",
-			},
-			{
-				label: "Store Europe",
-				flag: "eu",
-				url: "https://shop.gracieabrams.eu",
-			},
-			{
-				label: "Store Allemagne",
-				flag: "de",
-				url: "https://gracieabrams.universal-music.de/en",
-			},
-			{ label: "Store UK", flag: "uk", url: "https://shopuk.gracieabrams.com" },
-			{ label: "Store US", flag: "us", url: "https://shop.gracieabrams.com" },
-		],
-	},
-	{
-		name: "Sabrina Carpenter",
-		initials: "SC",
-		stores: [
-			{
-				label: "Store France",
-				flag: "fr",
-				url: "https://storefr.sabrinacarpenter.com/",
-			},
-			{
-				label: "Store Allemagne",
-				flag: "de",
-				url: "https://storede.sabrinacarpenter.com/en",
-			},
-			{
-				label: "Store UK",
-				flag: "uk",
-				url: "https://shopuk.sabrinacarpenter.com/",
-			},
-			{
-				label: "Store US",
-				flag: "us",
-				url: "https://store.sabrinacarpenter.com/",
-			},
-		],
-	},
-];
+// --- Helpers désactivation stores ---
+function getDisabledStores(user) {
+	try {
+		return JSON.parse(localStorage.getItem(`disabledStores_${user}`)) || [];
+	} catch {
+		return [];
+	}
+}
 
+function saveDisabledStores(user, list) {
+	localStorage.setItem(`disabledStores_${user}`, JSON.stringify(list));
+}
+
+function isStoreEnabled(user, storeId) {
+	return !getDisabledStores(user).includes(storeId);
+}
+
+function toggleStore(user, storeId) {
+	const disabled = getDisabledStores(user);
+	const idx = disabled.indexOf(storeId);
+	if (idx === -1) disabled.push(storeId);
+	else disabled.splice(idx, 1);
+	saveDisabledStores(user, disabled);
+}
+
+// --- Rendu du menu artistes (sidebar) ---
 function initArtistStores() {
-	const container = document.getElementById("artist-stores");
-	if (!container) return;
-
-	artists.forEach((artist) => {
-		// Pill
-		const pill = document.createElement("div");
-		pill.className = "artist-pill";
-
-		// Avatar
-		const avatar = document.createElement("div");
-		avatar.className = "artist-avatar";
-		avatar.textContent = artist.initials;
-
-		// Label tooltip
-		const label = document.createElement("div");
-		label.className = "artist-label";
-		label.textContent = artist.name;
-
-		// Dropdown
-		const dropdown = document.createElement("div");
-		dropdown.className = "store-dropdown";
-
-		// Header dropdown
-		const header = document.createElement("div");
-		header.className = "dropdown-header";
-
-		const title = document.createElement("span");
-		title.className = "dropdown-title";
-		title.textContent = artist.name;
-
-		const openAllBtn = document.createElement("button");
-		openAllBtn.className = "open-all-btn";
-		openAllBtn.textContent = "Tout ouvrir";
-		openAllBtn.addEventListener("click", (e) => {
-			e.stopPropagation();
-			artist.stores.forEach((s) => window.open(s.url, "_blank"));
-		});
-
-		header.appendChild(title);
-		header.appendChild(openAllBtn);
-		dropdown.appendChild(header);
-
-		// Liens
-		artist.stores.forEach((store) => {
-			const link = document.createElement("a");
-			link.className = "store-link";
-			link.href = store.url;
-			link.target = "_blank";
-			link.innerHTML = `
-				<img src="imgs/flags/${store.flag}.png" class="store-flag" alt="${store.flag}">
-				<span class="store-label">${store.label}</span>
-				<span class="store-arrow">→</span>
-			`;
-			link.addEventListener("click", (e) => e.stopPropagation());
-			dropdown.appendChild(link);
-		});
-
-		pill.appendChild(avatar);
-		pill.appendChild(label);
-		pill.appendChild(dropdown);
-
-		// Toggle open
-		pill.addEventListener("click", (e) => {
-			e.stopPropagation();
-			const isOpen = pill.classList.contains("open");
-			document
-				.querySelectorAll(".artist-pill")
-				.forEach((p) => p.classList.remove("open"));
-			if (!isOpen) pill.classList.add("open");
-		});
-
-		container.appendChild(pill);
-	});
+	renderArtistStores();
 
 	// Ferme au clic outside
 	document.addEventListener("click", () => {
@@ -1037,11 +1120,375 @@ function initArtistStores() {
 	});
 }
 
+function renderArtistStores() {
+	const container = document.getElementById("artist-stores");
+	if (!container) return;
+	container.innerHTML = "";
+
+	// Grouper par catégorie
+	const categories = {};
+	artists.forEach((artist) => {
+		const cat = artist.category || "store";
+		if (!categories[cat]) categories[cat] = [];
+		categories[cat].push(artist);
+	});
+
+	Object.entries(categories).forEach(([, artistList]) => {
+		artistList.forEach((artist) => {
+			// Filtrer les stores actifs pour ce user
+			const activeStores = artist.stores.filter((s) =>
+				isStoreEnabled(currentUser, s.id),
+			);
+			// Si aucun store actif, on n'affiche pas la pill
+			if (activeStores.length === 0) return;
+
+			const pill = document.createElement("div");
+			pill.className = "artist-pill";
+
+			const avatar = document.createElement("div");
+			avatar.className = "artist-avatar";
+			avatar.textContent = artist.initials;
+
+			const labelEl = document.createElement("div");
+			labelEl.className = "artist-label";
+			labelEl.textContent = artist.name;
+
+			const dropdown = document.createElement("div");
+			dropdown.className = "store-dropdown";
+
+			const header = document.createElement("div");
+			header.className = "dropdown-header";
+
+			const title = document.createElement("span");
+			title.className = "dropdown-title";
+			title.textContent = artist.name;
+
+			const openAllBtn = document.createElement("button");
+			openAllBtn.className = "open-all-btn";
+			openAllBtn.textContent = "Tout ouvrir";
+			openAllBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				activeStores.forEach((s) => window.open(s.url, "_blank"));
+			});
+
+			header.appendChild(title);
+			header.appendChild(openAllBtn);
+			dropdown.appendChild(header);
+
+			activeStores.forEach((store) => {
+				const link = document.createElement("a");
+				link.className = "store-link";
+				link.href = store.url;
+				link.target = "_blank";
+				link.innerHTML = `
+					<img src="imgs/flags/${store.flag}.png" class="store-flag" alt="${store.flag}">
+					<span class="store-label">${store.label}</span>
+					<span class="store-arrow">→</span>
+				`;
+				link.addEventListener("click", (e) => e.stopPropagation());
+				dropdown.appendChild(link);
+			});
+
+			pill.appendChild(avatar);
+			pill.appendChild(labelEl);
+			pill.appendChild(dropdown);
+
+			pill.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const isOpen = pill.classList.contains("open");
+				document
+					.querySelectorAll(".artist-pill")
+					.forEach((p) => p.classList.remove("open"));
+				if (!isOpen) pill.classList.add("open");
+			});
+
+			container.appendChild(pill);
+		});
+	});
+}
+
+// --- Rendu de la config artistes ---
+function renderArtistsConfig() {
+	const list = document.getElementById("artists-config-list");
+	if (!list || !currentUser) return;
+	list.innerHTML = "";
+
+	// Grouper par catégorie
+	const categories = {};
+	artists.forEach((artist) => {
+		const cat = artist.category || "store";
+		if (!categories[cat]) categories[cat] = [];
+		categories[cat].push(artist);
+	});
+
+	const catLabels = { store: "Stores artistes", autres: "Autres" };
+
+	Object.entries(categories).forEach(([cat, artistList]) => {
+		const catTitle = document.createElement("div");
+		catTitle.className = "artists-config-category";
+		catTitle.textContent = catLabels[cat] || cat;
+		list.appendChild(catTitle);
+
+		artistList.forEach((artist) => {
+			const allStoreIds = artist.stores.map((s) => s.id);
+			const allEnabled = allStoreIds.every((id) =>
+				isStoreEnabled(currentUser, id),
+			);
+			const someEnabled = allStoreIds.some((id) =>
+				isStoreEnabled(currentUser, id),
+			);
+
+			// Bloc artiste
+			const artistBlock = document.createElement("div");
+			artistBlock.className = "artists-config-artist";
+
+			// Header artiste avec toggle master
+			const artistHeader = document.createElement("div");
+			artistHeader.className = "artists-config-artist-header";
+
+			const artistInfo = document.createElement("div");
+			artistInfo.className = "artists-config-artist-info";
+
+			const initBadge = document.createElement("span");
+			initBadge.className = "artists-config-initials";
+			initBadge.textContent = artist.initials;
+
+			const artistName = document.createElement("span");
+			artistName.className = "artists-config-name";
+			artistName.textContent = artist.name;
+
+			artistInfo.appendChild(initBadge);
+			artistInfo.appendChild(artistName);
+
+			// Toggle master artiste
+			const masterToggle = document.createElement("label");
+			masterToggle.className = "toggle-switch";
+			const masterInput = document.createElement("input");
+			masterInput.type = "checkbox";
+			masterInput.checked = someEnabled;
+			masterInput.indeterminate = someEnabled && !allEnabled;
+			const masterSlider = document.createElement("span");
+			masterSlider.className = "toggle-slider";
+			masterToggle.appendChild(masterInput);
+			masterToggle.appendChild(masterSlider);
+
+			masterInput.addEventListener("change", () => {
+				const disabled = getDisabledStores(currentUser);
+				if (masterInput.checked) {
+					// Activer tous
+					allStoreIds.forEach((id) => {
+						const idx = disabled.indexOf(id);
+						if (idx !== -1) disabled.splice(idx, 1);
+					});
+				} else {
+					// Désactiver tous
+					allStoreIds.forEach((id) => {
+						if (!disabled.includes(id)) disabled.push(id);
+					});
+				}
+				saveDisabledStores(currentUser, disabled);
+				renderArtistsConfig();
+				renderArtistStores();
+			});
+
+			// Bouton expand stores
+			const expandBtn = document.createElement("button");
+			expandBtn.className = "artists-config-expand";
+			expandBtn.textContent = "▸";
+			expandBtn.title = "Voir les stores";
+
+			artistHeader.appendChild(artistInfo);
+			artistHeader.appendChild(masterToggle);
+			artistHeader.appendChild(expandBtn);
+			artistBlock.appendChild(artistHeader);
+
+			// Liste des stores (masquée par défaut)
+			const storeList = document.createElement("div");
+			storeList.className = "artists-config-stores hidden";
+
+			artist.stores.forEach((store) => {
+				const storeRow = document.createElement("div");
+				storeRow.className = "artists-config-store-row";
+
+				const storeLabel = document.createElement("span");
+				storeLabel.className = "artists-config-store-label";
+				storeLabel.innerHTML = `<img src="imgs/flags/${store.flag}.png" class="store-flag-mini" alt=""> ${store.label}`;
+
+				const storeToggle = document.createElement("label");
+				storeToggle.className = "toggle-switch toggle-switch-sm";
+				const storeInput = document.createElement("input");
+				storeInput.type = "checkbox";
+				storeInput.checked = isStoreEnabled(currentUser, store.id);
+				const storeSlider = document.createElement("span");
+				storeSlider.className = "toggle-slider";
+				storeToggle.appendChild(storeInput);
+				storeToggle.appendChild(storeSlider);
+
+				storeInput.addEventListener("change", () => {
+					toggleStore(currentUser, store.id);
+					renderArtistsConfig();
+					renderArtistStores();
+				});
+
+				storeRow.appendChild(storeLabel);
+				storeRow.appendChild(storeToggle);
+				storeList.appendChild(storeRow);
+			});
+
+			expandBtn.addEventListener("click", () => {
+				const hidden = storeList.classList.toggle("hidden");
+				expandBtn.textContent = hidden ? "▸" : "▾";
+			});
+
+			artistBlock.appendChild(storeList);
+			list.appendChild(artistBlock);
+		});
+	});
+}
+
+// --- Google Lens Modal ---
+function initLensModal() {
+	const modal = document.getElementById("lens-modal");
+	const closeBtn = document.getElementById("lens-close");
+	const dropzone = document.getElementById("lens-dropzone");
+	const fileInput = document.getElementById("lens-file-input");
+	const uploadLink = document.getElementById("lens-upload-link");
+	const preview = document.getElementById("lens-preview");
+	const previewImg = document.getElementById("lens-preview-img");
+	const previewRemove = document.getElementById("lens-preview-remove");
+	const dropInner = document.getElementById("lens-drop-inner");
+	const urlInput = document.getElementById("lens-url-input");
+	const searchBtn = document.getElementById("lens-search-btn");
+
+	let pendingFile = null;
+
+	function resetLens() {
+		pendingFile = null;
+		fileInput.value = "";
+		urlInput.value = "";
+		previewImg.src = "";
+		preview.classList.add("hidden");
+		dropInner.classList.remove("hidden");
+	}
+
+	function showPreview(src) {
+		previewImg.src = src;
+		dropInner.classList.add("hidden");
+		preview.classList.remove("hidden");
+	}
+
+	function closeLens() {
+		modal.classList.add("hidden");
+	}
+
+	// Ouvrir
+	document.getElementById("lens-btn").addEventListener("click", () => {
+		resetLens();
+		modal.classList.remove("hidden");
+	});
+
+	// Fermer
+	closeBtn.addEventListener("click", closeLens);
+	modal.addEventListener("click", (e) => {
+		if (e.target === modal) closeLens();
+	});
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape" && !modal.classList.contains("hidden")) closeLens();
+	});
+
+	// Clic sur dropzone → ouvre file picker (sauf si preview visible)
+	dropzone.addEventListener("click", (e) => {
+		if (e.target === previewRemove) return;
+		if (!preview.classList.contains("hidden")) return;
+		fileInput.click();
+	});
+
+	// Clic sur "importez un fichier"
+	uploadLink.addEventListener("click", (e) => {
+		e.stopPropagation();
+		fileInput.click();
+	});
+
+	// Sélection fichier
+	fileInput.addEventListener("change", () => {
+		const file = fileInput.files[0];
+		if (!file) return;
+		pendingFile = file;
+		urlInput.value = "";
+		const reader = new FileReader();
+		reader.onload = (e) => showPreview(e.target.result);
+		reader.readAsDataURL(file);
+	});
+
+	// Drag & drop
+	dropzone.addEventListener("dragover", (e) => {
+		e.preventDefault();
+		dropzone.classList.add("drag-active");
+	});
+	["dragleave", "dragend"].forEach((ev) =>
+		dropzone.addEventListener(ev, () =>
+			dropzone.classList.remove("drag-active"),
+		),
+	);
+	dropzone.addEventListener("drop", (e) => {
+		e.preventDefault();
+		dropzone.classList.remove("drag-active");
+		const file = e.dataTransfer.files[0];
+		if (!file || !file.type.startsWith("image/")) return;
+		pendingFile = file;
+		urlInput.value = "";
+		const reader = new FileReader();
+		reader.onload = (ev) => showPreview(ev.target.result);
+		reader.readAsDataURL(file);
+	});
+
+	// Supprimer preview
+	previewRemove.addEventListener("click", (e) => {
+		e.stopPropagation();
+		resetLens();
+	});
+
+	// Recherche
+	function doSearch() {
+		const url = urlInput.value.trim();
+		if (pendingFile) {
+			const form = document.createElement("form");
+			form.method = "POST";
+			form.action = "https://lens.google.com/upload";
+			form.enctype = "multipart/form-data";
+			form.target = "_blank";
+			const input = document.createElement("input");
+			input.type = "file";
+			input.name = "encoded_image";
+			const dt = new DataTransfer();
+			dt.items.add(pendingFile);
+			input.files = dt.files;
+			form.appendChild(input);
+			document.body.appendChild(form);
+			form.submit();
+			document.body.removeChild(form);
+			closeLens();
+		} else if (url) {
+			window.open(
+				`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(url)}`,
+				"_blank",
+			);
+			closeLens();
+		}
+	}
+
+	searchBtn.addEventListener("click", doSearch);
+	urlInput.addEventListener("keydown", (e) => {
+		if (e.key === "Enter") doSearch();
+	});
+}
+
 // --- Init ---
 window.onload = () => {
 	initUserSelector();
 	initShortcutModal();
 	initConfigModal();
+	initLensModal();
 
 	const savedUser = localStorage.getItem("currentUser");
 	if (savedUser && profiles[savedUser]) {
