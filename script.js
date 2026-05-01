@@ -646,33 +646,35 @@ function initConfigModal() {
 		document.getElementById("config-profile-name").value =
 			getDisplayName(currentUser);
 		// Reset onglet actif
-		document
+		modal
 			.querySelectorAll(".config-tab")
 			.forEach((t) => t.classList.remove("active"));
-		document
+		modal
 			.querySelectorAll(".config-tab-content")
 			.forEach((t) => t.classList.add("hidden"));
-		document
+		modal
 			.querySelector(".config-tab[data-tab='profil']")
 			.classList.add("active");
 		document.getElementById("tab-profil").classList.remove("hidden");
 		modal.classList.remove("hidden");
 	});
 
-	// Onglets
-	document.querySelectorAll(".config-tab").forEach((tab) => {
-		tab.addEventListener("click", () => {
-			document
-				.querySelectorAll(".config-tab")
-				.forEach((t) => t.classList.remove("active"));
-			document
-				.querySelectorAll(".config-tab-content")
-				.forEach((t) => t.classList.add("hidden"));
-			tab.classList.add("active");
-			const target = document.getElementById(`tab-${tab.dataset.tab}`);
-			if (target) target.classList.remove("hidden");
-			if (tab.dataset.tab === "artistes") renderArtistsConfig();
+	// Onglets — délégation sur le conteneur
+	modal.querySelector(".config-tabs").addEventListener("click", (e) => {
+		const tab = e.target.closest(".config-tab");
+		if (!tab) return;
+		const tabName = tab.dataset.tab;
+		modal
+			.querySelectorAll(".config-tab")
+			.forEach((t) => t.classList.remove("active"));
+		["tab-profil", "tab-artistes"].forEach((id) => {
+			const el = document.getElementById(id);
+			if (el) el.classList.add("hidden");
 		});
+		tab.classList.add("active");
+		const target = document.getElementById("tab-" + tabName);
+		if (target) target.classList.remove("hidden");
+		if (tabName === "artistes") renderArtistsConfig();
 	});
 
 	document
