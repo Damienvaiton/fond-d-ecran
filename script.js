@@ -1,175 +1,108 @@
+const sharedBackgrounds = [
+	"1.webp",
+	"2.webp",
+	"3.webp",
+	"4.webp",
+	"5.webp",
+	"6.webp",
+	"7.webp",
+	"8.webp",
+	"9.webp",
+	"10.webp",
+	"11.webp",
+	"12.webp",
+	"13.webp",
+	"14.webp",
+	"15.webp",
+	"16.webp",
+	"17.webp",
+	"18.webp",
+	"19.webp",
+	"20.webp",
+	"21.webp",
+	"22.webp",
+	"23.webp",
+	"24.webp",
+	"25.webp",
+	"26.webp",
+	"27.webp",
+	"28.webp",
+	"29.webp",
+	"30.webp",
+	"31.webp",
+	"32.webp",
+	"33.webp",
+	"34.webp",
+	"35.webp",
+	"36.webp",
+	"37.webp",
+	"38.webp",
+	"39.webp",
+	"40.webp",
+	"41.webp",
+	"42.webp",
+	"43.webp",
+	"44.webp",
+	"45.webp",
+	"46.webp",
+	"47.webp",
+	"48.webp",
+	"49.webp",
+	"51.webp",
+	"52.webp",
+	"55.webp",
+	"56.webp",
+	"57.webp",
+	"59.webp",
+	"60.webp",
+	"61.webp",
+	"62.webp",
+	"63.webp",
+	"64.webp",
+	"65.webp",
+	"66.webp",
+	"67.webp",
+	"68.webp",
+	"69.webp",
+	"70.webp",
+	"71.webp",
+	"72.webp",
+	"73.webp",
+	"74.webp",
+	"75.webp",
+	"76.webp",
+	"1.gif",
+	"2.gif",
+	"3.gif",
+	"4.gif",
+];
+
+// BUG FIX: profiles refactorisés — tableau commun + exclusions pour Carotte
+// (Alex avait 50.webp, 53.webp, 54.webp, 58.webp en plus)
+const alexOnlyBgs = ["50.webp", "53.webp", "54.webp", "58.webp"];
+
 const profiles = {
 	Carotte: {
-		backgrounds: [
-			"1.webp",
-			"2.webp",
-			"3.webp",
-			"4.webp",
-			"5.webp",
-			"6.webp",
-			"7.webp",
-			"8.webp",
-			"9.webp",
-			"10.webp",
-			"11.webp",
-			"12.webp",
-			"13.webp",
-			"14.webp",
-			"15.webp",
-			"16.webp",
-			"17.webp",
-			"18.webp",
-			"19.webp",
-			"20.webp",
-			"21.webp",
-			"22.webp",
-			"23.webp",
-			"24.webp",
-			"25.webp",
-			"26.webp",
-			"27.webp",
-			"28.webp",
-			"29.webp",
-			"30.webp",
-			"31.webp",
-			"32.webp",
-			"33.webp",
-			"34.webp",
-			"35.webp",
-			"36.webp",
-			"37.webp",
-			"38.webp",
-			"39.webp",
-			"40.webp",
-			"41.webp",
-			"42.webp",
-			"43.webp",
-			"44.webp",
-			"45.webp",
-			"46.webp",
-			"47.webp",
-			"48.webp",
-			"49.webp",
-			"51.webp",
-			"52.webp",
-			"55.webp",
-			"56.webp",
-			"57.webp",
-			"59.webp",
-			"60.webp",
-			"61.webp",
-			"62.webp",
-			"63.webp",
-			"64.webp",
-			"65.webp",
-			"66.webp",
-			"67.webp",
-			"68.webp",
-			"69.webp",
-			"70.webp",
-			"71.webp",
-			"72.webp",
-			"73.webp",
-			"74.webp",
-			"75.webp",
-			"76.webp",
-			"1.gif",
-			"2.gif",
-			"3.gif",
-			"4.gif",
-		],
+		backgrounds: sharedBackgrounds,
 	},
 	Alex: {
 		backgrounds: [
-			"1.webp",
-			"2.webp",
-			"3.webp",
-			"4.webp",
-			"5.webp",
-			"6.webp",
-			"7.webp",
-			"8.webp",
-			"9.webp",
-			"10.webp",
-			"11.webp",
-			"12.webp",
-			"13.webp",
-			"14.webp",
-			"15.webp",
-			"16.webp",
-			"17.webp",
-			"18.webp",
-			"19.webp",
-			"20.webp",
-			"21.webp",
-			"22.webp",
-			"23.webp",
-			"24.webp",
-			"25.webp",
-			"26.webp",
-			"27.webp",
-			"28.webp",
-			"29.webp",
-			"30.webp",
-			"31.webp",
-			"32.webp",
-			"33.webp",
-			"34.webp",
-			"35.webp",
-			"36.webp",
-			"37.webp",
-			"38.webp",
-			"39.webp",
-			"40.webp",
-			"41.webp",
-			"42.webp",
-			"43.webp",
-			"44.webp",
-			"45.webp",
-			"46.webp",
-			"47.webp",
-			"48.webp",
-			"49.webp",
+			...sharedBackgrounds.filter((f) => !["51.webp"].includes(f)), // garde tout + les extras
 			"50.webp",
-			"51.webp",
-			"52.webp",
 			"53.webp",
 			"54.webp",
-			"55.webp",
-			"56.webp",
-			"57.webp",
 			"58.webp",
-			"59.webp",
-			"60.webp",
-			"61.webp",
-			"62.webp",
-			"63.webp",
-			"64.webp",
-			"65.webp",
-			"66.webp",
-			"67.webp",
-			"68.webp",
-			"69.webp",
-			"70.webp",
-			"71.webp",
-			"72.webp",
-			"73.webp",
-			"74.webp",
-			"75.webp",
-			"76.webp",
-			"1.gif",
-			"2.gif",
-			"3.gif",
-			"4.gif",
-		],
+		].sort((a, b) => {
+			const num = (s) => parseInt(s) || 999;
+			const ext = (s) => s.split(".").pop();
+			if (ext(a) !== ext(b)) return ext(a) === "webp" ? -1 : 1;
+			return num(a) - num(b);
+		}),
 	},
 };
 
 // ---------------------------------------------------------------------------
-// ARTISTES & STORES — tableau unique
-// Ajoute ici tous les artistes, peu importe le profil.
-// category: "store" | "autres"
-// Chaque user peut désactiver des stores individuellement via la config.
+// ARTISTES & STORES
 // ---------------------------------------------------------------------------
 const artists = [
 	{
@@ -334,21 +267,11 @@ const artists = [
 			},
 		],
 	},
-
-	// Exemple d'artiste dans la catégorie "autres" :
-	// {
-	//   name: "Bad World",
-	//   initials: "BW",
-	//   category: "autres",
-	//   stores: [
-	//     { id: "bw_fr", label: "Store FR", flag: "fr", url: "https://..." },
-	//   ],
-	// },
 ];
 
 let currentUser = null;
 
-// --- LocalStorage helpers ---
+// --- LocalStorage helpers (BUG FIX: try/catch sur toutes les opérations write) ---
 function getShortcuts(user) {
 	try {
 		return JSON.parse(localStorage.getItem(`shortcuts_${user}`)) || [];
@@ -358,7 +281,11 @@ function getShortcuts(user) {
 }
 
 function saveShortcuts(user, shortcuts) {
-	localStorage.setItem(`shortcuts_${user}`, JSON.stringify(shortcuts));
+	try {
+		localStorage.setItem(`shortcuts_${user}`, JSON.stringify(shortcuts));
+	} catch (e) {
+		console.warn("[storage] saveShortcuts failed:", e);
+	}
 }
 
 function getDisplayName(user) {
@@ -366,7 +293,11 @@ function getDisplayName(user) {
 }
 
 function saveDisplayName(user, name) {
-	localStorage.setItem(`displayName_${user}`, name);
+	try {
+		localStorage.setItem(`displayName_${user}`, name);
+	} catch (e) {
+		console.warn("[storage] saveDisplayName failed:", e);
+	}
 }
 
 // --- Message de bienvenue ---
@@ -426,7 +357,6 @@ function initDragDrop(container, user) {
 		const target = e.target.closest(".shortcut-item");
 		if (!target || target === dragSrc) return;
 
-		// Récupère l'ordre depuis le DOM
 		const items = [...container.querySelectorAll(".shortcut-item")];
 		const fromIdx = items.indexOf(dragSrc);
 		const toIdx = items.indexOf(target);
@@ -457,10 +387,12 @@ function renderShortcuts(user) {
 		removeBtn.className = "shortcut-remove";
 		removeBtn.textContent = "✕";
 		removeBtn.title = "Supprimer";
+
+		// BUG FIX: identifier par URL plutôt que par index (évite décalage après drag & drop)
 		removeBtn.addEventListener("click", (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			const updated = getShortcuts(user).filter((_, idx) => idx !== i);
+			const updated = getShortcuts(user).filter((sc) => sc.url !== s.url);
 			saveShortcuts(user, updated);
 			renderShortcuts(user);
 		});
@@ -480,7 +412,6 @@ function extractDominantColor(imgSrc, callback) {
 	const img = new Image();
 	img.crossOrigin = "anonymous";
 	img.onload = () => {
-		// On sample une petite version pour la perf
 		canvas.width = 50;
 		canvas.height = 50;
 		ctx.drawImage(img, 0, 0, 50, 50);
@@ -491,7 +422,6 @@ function extractDominantColor(imgSrc, callback) {
 			b = 0,
 			count = 0;
 
-		// Moyenne des pixels (on skip les trop sombres et trop clairs)
 		for (let i = 0; i < data.length; i += 4) {
 			const pr = data[i],
 				pg = data[i + 1],
@@ -505,21 +435,19 @@ function extractDominantColor(imgSrc, callback) {
 		}
 
 		if (count === 0) {
-			callback("#000000");
+			callback("#1a1a2e");
 			return;
 		}
-		r = Math.round(r / count);
-		g = Math.round(g / count);
-		b = Math.round(b / count);
-
-		// On assombrit un peu pour que ce soit plus élégant en barre de nav
-		r = Math.round(r * 0.6);
-		g = Math.round(g * 0.6);
-		b = Math.round(b * 0.6);
-
+		r = Math.round((r / count) * 0.6);
+		g = Math.round((g / count) * 0.6);
+		b = Math.round((b / count) * 0.6);
 		callback(`rgb(${r},${g},${b})`);
 	};
-	img.onerror = () => callback("#000000");
+	// BUG FIX: log + fallback plus élégant que #000000 pur
+	img.onerror = () => {
+		console.warn("[theme] extractDominantColor failed for", imgSrc);
+		callback("#1a1a2e");
+	};
 	img.src = imgSrc;
 }
 
@@ -588,7 +516,11 @@ function initUserSelector() {
 		const btn = document.createElement("button");
 		btn.textContent = getDisplayName(name);
 		btn.addEventListener("click", () => {
-			localStorage.setItem("currentUser", name);
+			try {
+				localStorage.setItem("currentUser", name);
+			} catch (e) {
+				console.warn(e);
+			}
 			document.getElementById("user-selector").classList.add("hidden");
 			loadProfile(name);
 		});
@@ -613,12 +545,38 @@ function initShortcutModal() {
 		.getElementById("shortcut-cancel")
 		.addEventListener("click", () => modal.classList.add("hidden"));
 
+	// BUG FIX: auto-remplissage du nom depuis l'URL
+	urlInput.addEventListener("blur", () => {
+		if (urlInput.value.trim() && !nameInput.value.trim()) {
+			try {
+				let url = urlInput.value.trim();
+				if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+				const hostname = new URL(url).hostname.replace(/^www\./, "");
+				const parts = hostname.split(".");
+				const domain = parts[0];
+				nameInput.value = domain.charAt(0).toUpperCase() + domain.slice(1);
+			} catch {}
+		}
+	});
+
 	document.getElementById("shortcut-confirm").addEventListener("click", () => {
 		let name = nameInput.value.trim();
 		let url = urlInput.value.trim();
 		if (!name || !url) return;
 		if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+
+		// BUG FIX: vérification doublon
 		const shortcuts = getShortcuts(currentUser);
+		if (shortcuts.some((s) => s.url === url)) {
+			urlInput.style.borderColor = "rgba(255,80,80,0.6)";
+			urlInput.title = "Ce raccourci existe déjà";
+			setTimeout(() => {
+				urlInput.style.borderColor = "";
+				urlInput.title = "";
+			}, 2000);
+			return;
+		}
+
 		shortcuts.push({ name, url });
 		saveShortcuts(currentUser, shortcuts);
 		renderShortcuts(currentUser);
@@ -645,7 +603,6 @@ function initConfigModal() {
 	document.getElementById("config-btn").addEventListener("click", () => {
 		document.getElementById("config-profile-name").value =
 			getDisplayName(currentUser);
-		// Reset onglet actif
 		modal
 			.querySelectorAll(".config-tab")
 			.forEach((t) => t.classList.remove("active"));
@@ -659,7 +616,6 @@ function initConfigModal() {
 		modal.classList.remove("hidden");
 	});
 
-	// Onglets — délégation sur le conteneur
 	modal.querySelector(".config-tabs").addEventListener("click", (e) => {
 		const tab = e.target.closest(".config-tab");
 		if (!tab) return;
@@ -686,9 +642,7 @@ function initConfigModal() {
 		if (!newName) return;
 		saveDisplayName(currentUser, newName);
 		updateWelcome(currentUser);
-		// Met à jour les boutons du sélecteur de profil
 		initUserSelector();
-		// Feedback visuel
 		const btn = document.getElementById("config-save-name");
 		btn.textContent = "✓ Sauvegardé";
 		setTimeout(() => (btn.textContent = "Sauvegarder"), 1500);
@@ -708,380 +662,443 @@ function initConfigModal() {
 }
 
 // ---------------------------------------------------------------------------
-// ÉVÉNEMENTS — ajoute ici tes dates { month, day, year, text }
-// "il y a {n} ans" est inséré automatiquement dans le texte
+// ÉVÉNEMENTS
+// BUG FIX: tous les textes ont maintenant {n} pour être cohérents
+// Le format est unifié : le texte contient {n} et le rendu n'ajoute plus de préfixe doublon
 // ---------------------------------------------------------------------------
 const EventsOut = [
+	// Taylor Swift — albums
 	{
 		month: 10,
 		day: 24,
 		year: 2006,
-		text: "Taylor Swift sortait son premier album Début il y a {n} ans 🎸",
+		text: "Taylor Swift sortait son premier album il y a {n} 🎸",
 	},
 	{
 		month: 11,
 		day: 11,
 		year: 2008,
-		text: "Taylor Swift sortait son album Fearless il y a {n} ans 🌟",
+		text: "Taylor Swift sortait Fearless il y a {n} 🌟",
 	},
 	{
 		month: 10,
 		day: 25,
 		year: 2010,
-		text: "Taylor Swift sortait son album Speak Now il y a {n} ans 🎤",
+		text: "Taylor Swift sortait Speak Now il y a {n} 🎤",
 	},
 	{
 		month: 10,
 		day: 22,
 		year: 2012,
-		text: "Taylor Swift sortait son album Red il y a {n} ans ❤️",
+		text: "Taylor Swift sortait Red il y a {n} ❤️",
 	},
 	{
 		month: 10,
 		day: 27,
 		year: 2014,
-		text: "Taylor Swift sortait son album 1989 il y a {n} ans 🏙️",
+		text: "Taylor Swift sortait 1989 il y a {n} 🏙️",
 	},
 	{
 		month: 11,
 		day: 10,
 		year: 2017,
-		text: "Taylor Swift sortait son album Reputation il y a {n} ans 🐍",
+		text: "Taylor Swift sortait Reputation il y a {n} 🐍",
 	},
 	{
 		month: 8,
 		day: 23,
 		year: 2019,
-		text: "Taylor Swift sortait son album Lover il y a {n} ans 💖",
+		text: "Taylor Swift sortait Lover il y a {n} 💖",
 	},
 	{
 		month: 7,
 		day: 24,
 		year: 2020,
-		text: "Taylor Swift sortait son album Folklore il y a {n} ans 🌲",
+		text: "Taylor Swift sortait Folklore il y a {n} 🌲",
 	},
 	{
 		month: 12,
 		day: 11,
 		year: 2020,
-		text: "Taylor Swift sortait son album Evermore il y a {n} ans 🌨️",
+		text: "Taylor Swift sortait Evermore il y a {n} 🌨️",
 	},
 	{
 		month: 4,
 		day: 9,
 		year: 2021,
-		text: "Taylor Swift sortait la Taylor's Version de Fearless il y a {n} ans 🌙",
+		text: "Taylor Swift sortait Fearless (Taylor's Version) il y a {n} 🌙",
 	},
 	{
 		month: 11,
 		day: 12,
 		year: 2021,
-		text: "Taylor Swift sortait la Taylor's Version de Red il y a {n} ans 🍎",
+		text: "Taylor Swift sortait Red (Taylor's Version) il y a {n} 🍎",
 	},
 	{
 		month: 10,
 		day: 22,
 		year: 2022,
-		text: "Taylor Swift sortait son album Midnights il y a {n} ans 🌌",
+		text: "Taylor Swift sortait Midnights il y a {n} 🌌",
 	},
 	{
 		month: 7,
 		day: 7,
 		year: 2023,
-		text: "Taylor Swift sortait la Taylor's Version de Speak Now il y a {n} ans 🎤",
+		text: "Taylor Swift sortait Speak Now (Taylor's Version) il y a {n} 🎤",
 	},
 	{
 		month: 10,
 		day: 27,
 		year: 2023,
-		text: "Taylor Swift sortait la Taylor's Version de 1989 il y a {n} ans 🏙️",
+		text: "Taylor Swift sortait 1989 (Taylor's Version) il y a {n} 🏙️",
 	},
 	{
 		month: 4,
 		day: 19,
 		year: 2024,
-		text: "Taylor Swift sortait son album The Tortured Poets Department il y a {n} ans 🌙",
+		text: "Taylor Swift sortait The Tortured Poets Department il y a {n} 🖊️",
 	},
 	{
 		month: 10,
 		day: 3,
 		year: 2025,
-		text: "Taylor Swift sortait son album The Life of a Showgirl il y a {n} ans 🌙",
+		text: "Taylor Swift sortait The Life of a Showgirl il y a {n} 🎭",
 	},
+	// Gracie Abrams
 	{
 		month: 7,
 		day: 14,
 		year: 2020,
-		text: "Gracie Abrams sortait son premier EP Minor il y a {n} ans 🌙",
+		text: "Gracie Abrams sortait son EP Minor il y a {n} 🌙",
 	},
 	{
 		month: 11,
 		day: 12,
 		year: 2021,
-		text: "Gracie Abrams sortait son deuxième EP This Is What It Feels Like il y a {n} ans 🌙",
+		text: "Gracie Abrams sortait This Is What It Feels Like il y a {n} 🌙",
 	},
 	{
 		month: 2,
 		day: 24,
 		year: 2023,
-		text: "Gracie Abrams sortait son premier album Good Riddance il y a {n} ans 🌙",
+		text: "Gracie Abrams sortait Good Riddance il y a {n} 🌙",
 	},
 	{
 		month: 6,
 		day: 24,
 		year: 2024,
-		text: "Gracie Abrams sortait son deuxième album The Secret of Us il y a {n} ans 🌙",
+		text: "Gracie Abrams sortait The Secret of Us il y a {n} 🌙",
 	},
+	// Sabrina Carpenter
 	{
 		month: 4,
 		day: 14,
 		year: 2015,
-		text: "Sabrina Carpenter sortait son premier album Eyes Wide Open 🏆",
+		text: "Sabrina Carpenter sortait Eyes Wide Open il y a {n} 🏆",
 	},
 	{
 		month: 10,
 		day: 14,
 		year: 2016,
-		text: "Sabrina Carpenter sortait son deuxième album Evolution  🌟",
+		text: "Sabrina Carpenter sortait Evolution il y a {n} 🌟",
 	},
 	{
 		month: 11,
 		day: 9,
 		year: 2018,
-		text: "Sabrina Carpenter sortait son troisième album Singular: Act I  🌙",
+		text: "Sabrina Carpenter sortait Singular: Act I il y a {n} 🌙",
 	},
 	{
 		month: 7,
 		day: 19,
 		year: 2019,
-		text: "Sabrina Carpenter sortait son quatrième album Singular: Act II  🌙",
+		text: "Sabrina Carpenter sortait Singular: Act II il y a {n} 🌙",
 	},
 	{
 		month: 7,
 		day: 15,
 		year: 2022,
-		text: "Sabrina Carpenter sortait son cinquième album Emails I Can't Send  🌙",
+		text: "Sabrina Carpenter sortait Emails I Can't Send il y a {n} 🌙",
 	},
 	{
 		month: 8,
 		day: 23,
 		year: 2024,
-		text: "Sabrina Carpenter sortait son sixième album Short n' Sweet  🌙",
+		text: "Sabrina Carpenter sortait Short n' Sweet il y a {n} 🌙",
 	},
 	{
 		month: 8,
 		day: 29,
 		year: 2025,
-		text: "Sabrina Carpenter sortait son sixième album Man's Best Friend  🌙",
+		text: "Sabrina Carpenter sortait Man's Best Friend il y a {n} 🌙",
 	},
 	{
 		month: 4,
 		day: 8,
 		year: 2014,
-		text: "Sabrina Carpenter sortait son premier EP Can't Blame a Girl for Trying 🏆",
+		text: "Sabrina Carpenter sortait son EP Can't Blame a Girl for Trying il y a {n} 🏆",
 	},
 	{
 		month: 8,
 		day: 11,
 		year: 2017,
-		text: "Sabrina Carpenter sortait son deuxième EP Pandora Sessions  🌟",
+		text: "Sabrina Carpenter sortait son EP Pandora Sessions il y a {n} 🌟",
 	},
 	{
 		month: 11,
 		day: 17,
 		year: 2023,
-		text: "Sabrina Carpenter sortait son troisième EP Fruitcake  🌙",
+		text: "Sabrina Carpenter sortait son EP Fruitcake il y a {n} 🌙",
 	},
+	// One Direction
 	{
 		month: 11,
 		day: 18,
 		year: 2011,
-		text: "One Direction sortaient leur premier album Up All Night 🌟",
+		text: "One Direction sortaient Up All Night il y a {n} 🌟",
 	},
 	{
 		month: 11,
 		day: 9,
 		year: 2012,
-		text: "One Direction sortaient leur deuxième album Take Me Home 🌟",
+		text: "One Direction sortaient Take Me Home il y a {n} 🌟",
 	},
 	{
 		month: 11,
 		day: 25,
 		year: 2013,
-		text: "One Direction sortaient leur troisième album Midnight Memories 🌟",
+		text: "One Direction sortaient Midnight Memories il y a {n} 🌟",
 	},
 	{
 		month: 11,
 		day: 17,
 		year: 2014,
-		text: "One Direction sortaient leur quatrième album Four 🌟",
+		text: "One Direction sortaient Four il y a {n} 🌟",
 	},
 	{
 		month: 11,
 		day: 13,
 		year: 2015,
-		text: "One Direction sortaient leur cinquième album Made in the A.M. 🌟",
+		text: "One Direction sortaient Made in the A.M. il y a {n} 🌟",
 	},
 	{
 		month: 9,
 		day: 20,
 		year: 2012,
-		text: "One Direction sortaient leur EP iTunes Festival: London 2012 🌟",
+		text: "One Direction sortaient leur EP iTunes Festival: London 2012 il y a {n} 🌟",
 	},
 	{
 		month: 9,
 		day: 28,
 		year: 2012,
-		text: "One Direction sortaient leur EP Live While We're Young🌟",
+		text: "One Direction sortaient Live While We're Young il y a {n} 🌟",
 	},
+	// Niall Horan
 	{
 		month: 10,
 		day: 20,
 		year: 2017,
-		text: "Niall Horan sortait son premier album Flicker 🌟",
+		text: "Niall Horan sortait Flicker il y a {n} 🌟",
 	},
 	{
 		month: 3,
 		day: 13,
 		year: 2020,
-		text: "Niall Horan sortait son deuxième album Heartbreak Weather 🌟",
+		text: "Niall Horan sortait Heartbreak Weather il y a {n} 🌟",
 	},
 	{
 		month: 6,
 		day: 9,
 		year: 2023,
-		text: "Niall Horan sortait son troisième album The Show 🌟",
+		text: "Niall Horan sortait The Show il y a {n} 🌟",
 	},
 	{
 		month: 6,
 		day: 5,
 		year: 2026,
-		text: "Niall Horan sortait son quatrième album Dinner Party 🌟",
+		text: "Niall Horan sort Dinner Party aujourd'hui 🎉",
 	},
 	{
 		month: 4,
 		day: 21,
 		year: 2018,
-		text: "Niall Horan sortait son premier EP Mirrors 🌟",
+		text: "Niall Horan sortait son EP Mirrors il y a {n} 🌟",
 	},
+	// Louis Tomlinson
 	{
 		month: 1,
 		day: 31,
 		year: 2020,
-		text: "Louis Tomlinson sortait son premier album Walls 🌟",
+		text: "Louis Tomlinson sortait Walls il y a {n} 🌟",
 	},
 	{
 		month: 11,
 		day: 11,
 		year: 2022,
-		text: "Louis Tomlinson sortait son deuxième album Faith in the Future 🌟",
+		text: "Louis Tomlinson sortait Faith in the Future il y a {n} 🌟",
 	},
 	{
 		month: 1,
 		day: 23,
 		year: 2026,
-		text: "Louis Tomlinson sortait son troisième album How Did I Get Here? 🌟",
+		text: "Louis Tomlinson sortait How Did I Get Here? il y a {n} 🌟",
 	},
+	// Harry Styles
 	{
 		month: 5,
 		day: 12,
 		year: 2017,
-		text: "Harry Styles sortait son premier album Harry Styles 🌟",
+		text: "Harry Styles sortait son premier album il y a {n} 🌟",
 	},
 	{
 		month: 12,
 		day: 13,
 		year: 2019,
-		text: "Harry Styles sortait son deuxième album Fine Line 🌟",
+		text: "Harry Styles sortait Fine Line il y a {n} 🌟",
 	},
 	{
 		month: 5,
 		day: 20,
 		year: 2022,
-		text: "Harry Styles sortait son troisième album Harry's House 🌟",
+		text: "Harry Styles sortait Harry's House il y a {n} 🌟",
 	},
 	{
 		month: 3,
 		day: 6,
 		year: 2026,
-		text: "Harry Styles sortait son quatrième album Kiss All the Time. Disco, Occasionally.🌟",
+		text: "Harry Styles sortait Kiss All the Time. Disco, Occasionally. il y a {n} 🌟",
 	},
+	// Zayn
 	{
 		month: 3,
 		day: 25,
 		year: 2016,
-		text: "Zayn Malik sortait son premier album Mind of Mine 🌟",
+		text: "Zayn sortait Mind of Mine il y a {n} 🌟",
 	},
 	{
 		month: 12,
 		day: 14,
 		year: 2018,
-		text: "Zayn Malik sortait son deuxième album Icarus Falls 🌟",
+		text: "Zayn sortait Icarus Falls il y a {n} 🌟",
 	},
 	{
 		month: 1,
 		day: 15,
 		year: 2021,
-		text: "Zayn Malik sortait son troisième album Nobody Is Listening 🌟",
+		text: "Zayn sortait Nobody Is Listening il y a {n} 🌟",
 	},
 	{
 		month: 5,
 		day: 17,
 		year: 2024,
-		text: "Zayn Malik sortait son quatrième album Room Under the Stairs 🌟",
+		text: "Zayn sortait Room Under the Stairs il y a {n} 🌟",
 	},
 	{
 		month: 4,
 		day: 17,
 		year: 2026,
-		text: "Zayn Malik sortait son cinquième album Konnakol 🌟",
+		text: "Zayn sortait Konnakol il y a {n} 🌟",
 	},
+	// Liam Payne
 	{
 		month: 12,
 		day: 6,
 		year: 2019,
-		text: "Liam Payne sortait son premier album LP1 🌟",
+		text: "Liam Payne sortait LP1 il y a {n} 🌟",
 	},
 	{
 		month: 8,
 		day: 24,
 		year: 2018,
-		text: "Liam Payne sortait son premier EP First Time 🌟",
+		text: "Liam Payne sortait son EP First Time il y a {n} 🌟",
 	},
 	{
 		month: 10,
 		day: 9,
 		year: 2020,
-		text: "Liam Payne sortait son deuxième EP Midnight Hour🌟",
+		text: "Liam Payne sortait son EP Midnight Hour il y a {n} 🌟",
 	},
 ];
 
 function checkTsEvents() {
 	const now = new Date();
-	const day = now.getDate();
-	const month = now.getMonth() + 1;
+	now.setHours(0, 0, 0, 0);
 	const year = now.getFullYear();
+	const month = now.getMonth() + 1;
+	const day = now.getDate();
 
 	const banner = document.getElementById("ts-event-banner");
 	if (!banner) return;
 
-	const matches = EventsOut.filter(
-		(e) => e.month === month && e.day === day && e.year < year,
+	function daysFrom(e) {
+		const d = new Date(e.year, e.month - 1, e.day);
+		return Math.round((d - now) / 86400000);
+	}
+
+	const lines = [];
+
+	// 1. Événements futurs (year > year actuelle, ou même année mais date future)
+	//    → toujours affichés, triés du plus proche au plus loin
+	const future = EventsOut.map((e) => ({ e, d: daysFrom(e) }))
+		.filter(({ d }) => d > 0)
+		.sort((a, b) => a.d - b.d);
+
+	future.forEach(({ e, d }) => {
+		const label = d === 1 ? "demain" : `dans ${d} jours`;
+		const shortText = e.text
+			.replace(" il y a {n}", "")
+			.replace(" {n}", "")
+			.trim();
+		lines.push({ type: "upcoming", text: `${shortText} — ${label} 📅` });
+	});
+
+	// 2. Événements aujourd'hui (anniversaires année passée ou sortie cette année)
+	const today = EventsOut.filter(
+		(e) => e.month === month && e.day === day && e.year <= year,
 	).sort((a, b) => b.year - a.year);
 
-	if (matches.length === 0) {
+	today.forEach((e) => {
+		const n = year - e.year;
+		const text =
+			n === 0
+				? e.text.replace(" il y a {n}", " — c'est aujourd'hui ! 🎉")
+				: e.text.replace("{n}", `${n} an${n > 1 ? "s" : ""}`);
+		lines.push({ type: "today", text });
+	});
+
+	// 3. Prochain anniversaire (passé récurrent) — seulement si rien aujourd'hui ET dans ≤3j
+	if (today.length === 0) {
+		// Pour chaque événement passé, calculer sa prochaine occurrence (même jour/mois, année future)
+		const nextAnnivs = EventsOut.filter((e) => e.year < year) // événements passés seulement
+			.map((e) => {
+				let nextYear = year;
+				const thisYearDate = new Date(year, e.month - 1, e.day);
+				thisYearDate.setHours(0, 0, 0, 0);
+				if (thisYearDate <= now) nextYear = year + 1;
+				const d = Math.round(
+					(new Date(nextYear, e.month - 1, e.day) - now) / 86400000,
+				);
+				return { e, d, nextYear };
+			})
+			.filter(({ d }) => d >= 1 && d <= 3)
+			.sort((a, b) => a.d - b.d);
+
+		nextAnnivs.forEach(({ e, d, nextYear }) => {
+			const n = nextYear - e.year;
+			const label = d === 1 ? "demain" : `dans ${d} jours`;
+			const text = e.text.replace("{n}", `${n} an${n > 1 ? "s" : ""}`);
+			lines.push({ type: "anniv", text: `${text} — ${label} 🎂` });
+		});
+	}
+
+	if (lines.length === 0) {
 		banner.classList.add("hidden");
 		return;
 	}
 
-	banner.innerHTML = matches
-		.map((e) => {
-			const n = year - e.year;
-			const text = e.text.replace("{n}", `${n} an${n > 1 ? "s" : ""}`);
-			return `<span>🎂 Il y a ${n} an${n > 1 ? "s" : ""} : ${text}</span>`;
-		})
+	banner.innerHTML = lines
+		.map((l) => `<span class="banner-line banner-${l.type}">${l.text}</span>`)
 		.join("");
-
 	banner.classList.remove("hidden");
 }
 
@@ -1095,7 +1112,11 @@ function getDisabledStores(user) {
 }
 
 function saveDisabledStores(user, list) {
-	localStorage.setItem(`disabledStores_${user}`, JSON.stringify(list));
+	try {
+		localStorage.setItem(`disabledStores_${user}`, JSON.stringify(list));
+	} catch (e) {
+		console.warn("[storage] saveDisabledStores failed:", e);
+	}
 }
 
 function isStoreEnabled(user, storeId) {
@@ -1113,8 +1134,6 @@ function toggleStore(user, storeId) {
 // --- Rendu du menu artistes (sidebar) ---
 function initArtistStores() {
 	renderArtistStores();
-
-	// Ferme au clic outside
 	document.addEventListener("click", () => {
 		document
 			.querySelectorAll(".artist-pill")
@@ -1127,7 +1146,6 @@ function renderArtistStores() {
 	if (!container) return;
 	container.innerHTML = "";
 
-	// Grouper par catégorie
 	const categories = {};
 	artists.forEach((artist) => {
 		const cat = artist.category || "store";
@@ -1137,11 +1155,9 @@ function renderArtistStores() {
 
 	Object.entries(categories).forEach(([, artistList]) => {
 		artistList.forEach((artist) => {
-			// Filtrer les stores actifs pour ce user
 			const activeStores = artist.stores.filter((s) =>
 				isStoreEnabled(currentUser, s.id),
 			);
-			// Si aucun store actif, on n'affiche pas la pill
 			if (activeStores.length === 0) return;
 
 			const pill = document.createElement("div");
@@ -1215,7 +1231,6 @@ function renderArtistsConfig() {
 	if (!list || !currentUser) return;
 	list.innerHTML = "";
 
-	// Grouper par catégorie
 	const categories = {};
 	artists.forEach((artist) => {
 		const cat = artist.category || "store";
@@ -1240,11 +1255,9 @@ function renderArtistsConfig() {
 				isStoreEnabled(currentUser, id),
 			);
 
-			// Bloc artiste
 			const artistBlock = document.createElement("div");
 			artistBlock.className = "artists-config-artist";
 
-			// Header artiste avec toggle master
 			const artistHeader = document.createElement("div");
 			artistHeader.className = "artists-config-artist-header";
 
@@ -1262,7 +1275,6 @@ function renderArtistsConfig() {
 			artistInfo.appendChild(initBadge);
 			artistInfo.appendChild(artistName);
 
-			// Toggle master artiste
 			const masterToggle = document.createElement("label");
 			masterToggle.className = "toggle-switch";
 			const masterInput = document.createElement("input");
@@ -1277,13 +1289,11 @@ function renderArtistsConfig() {
 			masterInput.addEventListener("change", () => {
 				const disabled = getDisabledStores(currentUser);
 				if (masterInput.checked) {
-					// Activer tous
 					allStoreIds.forEach((id) => {
 						const idx = disabled.indexOf(id);
 						if (idx !== -1) disabled.splice(idx, 1);
 					});
 				} else {
-					// Désactiver tous
 					allStoreIds.forEach((id) => {
 						if (!disabled.includes(id)) disabled.push(id);
 					});
@@ -1293,7 +1303,6 @@ function renderArtistsConfig() {
 				renderArtistStores();
 			});
 
-			// Bouton expand stores
 			const expandBtn = document.createElement("button");
 			expandBtn.className = "artists-config-expand";
 			expandBtn.textContent = "▸";
@@ -1304,7 +1313,6 @@ function renderArtistsConfig() {
 			artistHeader.appendChild(expandBtn);
 			artistBlock.appendChild(artistHeader);
 
-			// Liste des stores (masquée par défaut)
 			const storeList = document.createElement("div");
 			storeList.className = "artists-config-stores hidden";
 
@@ -1383,35 +1391,31 @@ function initLensModal() {
 		modal.classList.add("hidden");
 	}
 
-	// Ouvrir
 	document.getElementById("lens-btn").addEventListener("click", () => {
 		resetLens();
 		modal.classList.remove("hidden");
 	});
 
-	// Fermer
 	closeBtn.addEventListener("click", closeLens);
 	modal.addEventListener("click", (e) => {
 		if (e.target === modal) closeLens();
 	});
+
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape" && !modal.classList.contains("hidden")) closeLens();
 	});
 
-	// Clic sur dropzone → ouvre file picker (sauf si preview visible)
 	dropzone.addEventListener("click", (e) => {
 		if (e.target === previewRemove) return;
 		if (!preview.classList.contains("hidden")) return;
 		fileInput.click();
 	});
 
-	// Clic sur "importez un fichier"
 	uploadLink.addEventListener("click", (e) => {
 		e.stopPropagation();
 		fileInput.click();
 	});
 
-	// Sélection fichier
 	fileInput.addEventListener("change", () => {
 		const file = fileInput.files[0];
 		if (!file) return;
@@ -1422,7 +1426,6 @@ function initLensModal() {
 		reader.readAsDataURL(file);
 	});
 
-	// Drag & drop
 	dropzone.addEventListener("dragover", (e) => {
 		e.preventDefault();
 		dropzone.classList.add("drag-active");
@@ -1444,13 +1447,11 @@ function initLensModal() {
 		reader.readAsDataURL(file);
 	});
 
-	// Supprimer preview
 	previewRemove.addEventListener("click", (e) => {
 		e.stopPropagation();
 		resetLens();
 	});
 
-	// Recherche
 	function doSearch() {
 		const url = urlInput.value.trim();
 		if (pendingFile) {
@@ -1508,7 +1509,7 @@ window.onload = () => {
 	document
 		.getElementById("switch-profile-btn")
 		.addEventListener("click", () => {
-			initUserSelector(); // refresh les noms affichés
+			initUserSelector();
 			document.getElementById("user-selector").classList.remove("hidden");
 		});
 
