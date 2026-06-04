@@ -23,6 +23,39 @@
 			</div>
 		</div>
 
+		<!-- Menu contextuel raccourci (clic droit) -->
+		<div id="shortcut-context-menu" class="shortcut-context-menu hidden">
+			<button id="ctx-edit">✏️ Modifier</button>
+			<button id="ctx-delete">🗑️ Supprimer</button>
+		</div>
+
+		<!-- Modal édition raccourci -->
+		<div id="edit-shortcut-modal" class="modal hidden">
+			<div class="modal-content">
+				<h2>Modifier le raccourci</h2>
+				<div class="shortcut-form">
+					<input
+						type="text"
+						id="edit-shortcut-name"
+						placeholder="Nom"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+					<input
+						type="text"
+						id="edit-shortcut-url"
+						placeholder="URL"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+				</div>
+				<div class="modal-actions">
+					<button id="edit-shortcut-cancel">Annuler</button>
+					<button id="edit-shortcut-confirm">Sauvegarder</button>
+				</div>
+			</div>
+		</div>
+
 		<!-- Modal ajout raccourci -->
 		<div id="shortcut-modal" class="modal hidden">
 			<div class="modal-content">
@@ -71,6 +104,25 @@
 								spellcheck="false"
 							/>
 							<button id="config-save-name">Sauvegarder</button>
+						</div>
+					</div>
+					<div class="config-section">
+						<label>Affichage</label>
+						<div class="config-toggle-row">
+							<span class="config-toggle-label">Afficher l'horloge</span>
+							<label class="toggle-switch">
+								<input type="checkbox" id="toggle-clock" checked />
+								<span class="toggle-slider"></span>
+							</label>
+						</div>
+						<div class="config-toggle-row">
+							<span class="config-toggle-label"
+								>Événements de ce profil seulement</span
+							>
+							<label class="toggle-switch">
+								<input type="checkbox" id="toggle-events-filter" />
+								<span class="toggle-slider"></span>
+							</label>
 						</div>
 					</div>
 				</div>
@@ -198,9 +250,33 @@
 			<div id="shortcuts" class="shortcuts-container"></div>
 		</div>
 
+		<!-- Modal création dossier -->
+		<div id="folder-modal" class="modal hidden">
+			<div class="modal-content">
+				<h2>Créer un dossier</h2>
+				<div class="shortcut-form">
+					<input
+						type="text"
+						id="folder-name"
+						placeholder="Nom du dossier (ex: Réseaux sociaux)"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+				</div>
+				<div class="modal-actions">
+					<button id="folder-cancel">Annuler</button>
+					<button id="folder-confirm">Créer</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Popup dossier -->
+		<div id="folder-popup" class="folder-popup hidden"></div>
+
 		<!-- Boutons bas de page -->
 		<button id="switch-profile-btn" title="Changer de profil">⇄</button>
 		<button id="add-shortcut-btn" title="Ajouter un raccourci">+</button>
+		<button id="add-folder-btn" title="Créer un dossier">📁</button>
 		<button id="config-btn" title="Configuration">⚙</button>
 
 		<!-- Modal Google Lens -->
