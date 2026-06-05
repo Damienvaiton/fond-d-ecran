@@ -1,3 +1,7 @@
+// ---------------------------------------------------------------------------
+// BACKGROUNDS & PROFILS
+// ---------------------------------------------------------------------------
+
 const sharedBackgrounds = [
 	"1.webp",
 	"2.webp",
@@ -100,11 +104,13 @@ const profiles = {
 // ---------------------------------------------------------------------------
 // ARTISTES & STORES
 // ---------------------------------------------------------------------------
+
 const artists = [
 	{
 		name: "Taylor Swift",
 		initials: "TS",
 		category: "store",
+		profiles: ["Carotte", "Alex"],
 		stores: [
 			{
 				id: "ts_web",
@@ -142,6 +148,7 @@ const artists = [
 		name: "Gracie Abrams",
 		initials: "GA",
 		category: "store",
+		profiles: ["Carotte", "Alex"],
 		stores: [
 			{
 				id: "ga_fr",
@@ -179,6 +186,7 @@ const artists = [
 		name: "Tate McRae",
 		initials: "TM",
 		category: "store",
+		profiles: ["Carotte", "Alex"],
 		stores: [
 			{
 				id: "tm_eu",
@@ -204,6 +212,7 @@ const artists = [
 		name: "Sabrina Carpenter",
 		initials: "SC",
 		category: "store",
+		profiles: ["Carotte", "Alex"],
 		stores: [
 			{
 				id: "sc_fr",
@@ -235,6 +244,7 @@ const artists = [
 		name: "Disquaires",
 		initials: "D",
 		category: "store",
+		profiles: ["Carotte", "Alex"],
 		stores: [
 			{
 				id: "iMusic_fr",
@@ -248,6 +258,7 @@ const artists = [
 		name: "Autres",
 		initials: "A",
 		category: "autres",
+		profiles: ["Carotte", "Alex"],
 		stores: [
 			{
 				id: "bw",
@@ -265,9 +276,18 @@ const artists = [
 	},
 ];
 
-let currentUser = null;
+// ---------------------------------------------------------------------------
+// STATE
+// ---------------------------------------------------------------------------
 
-// --- LocalStorage helpers ---
+let currentUser = null;
+let eventsData = []; // chargé depuis events.json, immuable
+let bannerInterval = null; // remplace window._bannerInterval
+
+// ---------------------------------------------------------------------------
+// LOCALSTORAGE HELPERS
+// ---------------------------------------------------------------------------
+
 function getShortcuts(user) {
 	try {
 		return JSON.parse(localStorage.getItem(`shortcuts_${user}`)) || [];
@@ -275,7 +295,6 @@ function getShortcuts(user) {
 		return [];
 	}
 }
-
 function saveShortcuts(user, shortcuts) {
 	try {
 		localStorage.setItem(`shortcuts_${user}`, JSON.stringify(shortcuts));
@@ -287,7 +306,6 @@ function saveShortcuts(user, shortcuts) {
 function getDisplayName(user) {
 	return localStorage.getItem(`displayName_${user}`) || user;
 }
-
 function saveDisplayName(user, name) {
 	try {
 		localStorage.setItem(`displayName_${user}`, name);
@@ -296,30 +314,563 @@ function saveDisplayName(user, name) {
 	}
 }
 
-// --- Message de bienvenue ---
-function updateWelcome(user) {
-	const h = new Date().getHours();
-	let greeting, emoji;
-	if (h >= 5 && h < 12) {
-		greeting = "Bonjour";
-		emoji = "☀️";
-	} else if (h >= 12 && h < 18) {
-		greeting = "Bon après-midi";
-		emoji = "🌤️";
-	} else if (h >= 18 && h < 22) {
-		greeting = "Bonsoir";
-		emoji = "🌙";
-	} else {
-		greeting = "Bonne nuit";
-		emoji = "🌙";
-	}
-
-	const name = getDisplayName(user);
-	const el = document.getElementById("welcome-msg");
-	if (el) el.textContent = `${greeting}, ${name} ${emoji}`;
+function isClockVisible(user) {
+	const v = localStorage.getItem(`clockVisible_${user}`);
+	return v === null ? true : v === "true";
+}
+function saveClockVisible(user, val) {
+	localStorage.setItem(`clockVisible_${user}`, String(val));
 }
 
-// --- Drag & drop raccourcis ---
+function isEventsFiltered(user) {
+	return localStorage.getItem(`eventsFilter_${user}`) === "true";
+}
+function saveEventsFilter(user, val) {
+	localStorage.setItem(`eventsFilter_${user}`, String(val));
+}
+
+function getDisabledStores(user) {
+	try {
+		return JSON.parse(localStorage.getItem(`disabledStores_${user}`)) || [];
+	} catch {
+		return [];
+	}
+}
+function saveDisabledStores(user, list) {
+	try {
+		localStorage.setItem(`disabledStores_${user}`, JSON.stringify(list));
+	} catch (e) {
+		console.warn("[storage] saveDisabledStores failed:", e);
+	}
+}
+function isStoreEnabled(user, storeId) {
+	return !getDisabledStores(user).includes(storeId);
+}
+function toggleStore(user, storeId) {
+	const disabled = getDisabledStores(user);
+	const idx = disabled.indexOf(storeId);
+	if (idx === -1) disabled.push(storeId);
+	else disabled.splice(idx, 1);
+	saveDisabledStores(user, disabled);
+}
+
+function getArtistOrder() {
+	try {
+		return JSON.parse(localStorage.getItem("artistOrder")) || null;
+	} catch {
+		return null;
+	}
+}
+function saveArtistOrder(order) {
+	localStorage.setItem("artistOrder", JSON.stringify(order));
+}
+function getOrderedArtists() {
+	const order = getArtistOrder();
+	if (!order) return [...artists];
+	const map = Object.fromEntries(artists.map((a) => [a.name, a]));
+	const ordered = order.map((name) => map[name]).filter(Boolean);
+	artists.forEach((a) => {
+		if (!order.includes(a.name)) ordered.push(a);
+	});
+	return ordered;
+}
+
+// ---------------------------------------------------------------------------
+// EVENTS — chargement depuis events.json uniquement
+// ---------------------------------------------------------------------------
+
+async function loadAllEvents() {
+	try {
+		const res = await fetch("events.json");
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		eventsData = await res.json();
+	} catch (err) {
+		console.error("[events] Impossible de charger events.json :", err);
+		eventsData = [];
+	}
+}
+
+// ---------------------------------------------------------------------------
+// EVENTS — filtrage par profil
+// ---------------------------------------------------------------------------
+
+function isEventForProfile(event, user) {
+	if (!isEventsFiltered(user)) return true;
+	// L'event déclare explicitement ses profils
+	if (event.profiles && Array.isArray(event.profiles)) {
+		return event.profiles.includes(user);
+	}
+	// Sinon on cherche le nom de l'artiste dans le texte via la liste artists[]
+	const match = artists.find((a) => event.text.includes(a.name));
+	if (match && match.profiles) return match.profiles.includes(user);
+	return true; // événement sans artiste identifié → toujours affiché
+}
+
+// ---------------------------------------------------------------------------
+// EVENTS — bandeau du jour
+// ---------------------------------------------------------------------------
+
+function formatEventText(event, currentYear) {
+	const n = currentYear - event.year;
+	if (n === 0) {
+		// Supprime "{n} ans", "il y a {n} ans", etc. et ajoute "aujourd'hui"
+		return (
+			event.text
+				.replace(/il y a\s*\{n\}\s*ans?/gi, "")
+				.replace(/\{n\}\s*ans?/gi, "")
+				.trim()
+				.replace(/\s{2,}/g, " ") + " — c'est aujourd'hui ! 🎉"
+		);
+	}
+	return event.text.replace(/\{n\}/g, String(n));
+}
+
+// Recherche iTunes : retourne { artwork, trackName, artistName, collectionName, trackViewUrl }
+async function fetchItunesMeta(query) {
+	try {
+		const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=album&limit=1`;
+		const res = await fetch(url);
+		if (!res.ok) return null;
+		const data = await res.json();
+		if (!data.results?.length) return null;
+		const r = data.results[0];
+		return {
+			artwork: r.artworkUrl100.replace("100x100bb", "400x400bb"),
+			artistName: r.artistName,
+			collectionName: r.collectionName,
+			collectionViewUrl: r.collectionViewUrl,
+		};
+	} catch {
+		return null;
+	}
+}
+
+// Extrait le nom de l'album depuis le texte de l'event (entre guillemets ou après "album ")
+function extractAlbumQuery(event) {
+	// Cherche un nom entre guillemets typographiques ou droits
+	const quoted = event.text.match(/[«""]([^»""]+)[»""]/);
+	if (quoted) return quoted[1];
+	// Sinon prend tout ce qui suit "album " jusqu'au prochain mot-clé ou emoji
+	const afterAlbum = event.text.match(
+		/album\s+([A-Za-zÀ-ÿ0-9\s':!\-\.]+?)(?:\s+il y a|\s+🎉|\s*$)/i,
+	);
+	if (afterAlbum) return afterAlbum[1].trim();
+	return null;
+}
+
+// Construit la pill sobre pour un event "sortie aujourd'hui"
+async function buildReleaseCard(event) {
+	const year = new Date().getFullYear();
+	const text = formatEventText(event, year);
+
+	const artistObj = artists.find((a) => event.text.includes(a.name));
+	const artistName = artistObj?.name || "";
+	const albumName = extractAlbumQuery(event);
+	const query = albumName ? `${artistName} ${albumName}` : artistName;
+
+	const meta = query ? await fetchItunesMeta(query) : null;
+
+	const el = document.createElement("div");
+	el.className = "release-pill";
+
+	if (meta) {
+		el.innerHTML = `
+			<img class="release-pill-art" src="${meta.artwork}" alt="">
+			<span class="release-pill-text">
+				<span class="release-pill-name">${meta.collectionName}</span>
+				<span class="release-pill-artist">${meta.artistName}</span>
+			</span>
+			<a class="release-pill-btn" href="${meta.collectionViewUrl}" target="_blank" title="Apple Music">
+				<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+					<path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm-1 10V5l5 3-5 3z"/>
+				</svg>
+			</a>
+		`;
+	} else {
+		el.innerHTML = `<span class="release-pill-fallback">${text}</span>`;
+	}
+	return el;
+}
+
+async function checkTsEvents() {
+	const now = new Date();
+	const day = now.getDate();
+	const month = now.getMonth() + 1;
+	const year = now.getFullYear();
+
+	const banner = document.getElementById("ts-event-banner");
+	if (!banner) return;
+
+	// Sorties exactes aujourd'hui (year === cette année)
+	const todayReleases = eventsData.filter(
+		(e) =>
+			e.month === month &&
+			e.day === day &&
+			e.year === year &&
+			isEventForProfile(e, currentUser),
+	);
+
+	// Anniversaires aujourd'hui (year < cette année)
+	const todayAnnis = eventsData
+		.filter(
+			(e) =>
+				e.month === month &&
+				e.day === day &&
+				e.year < year &&
+				isEventForProfile(e, currentUser),
+		)
+		.sort((a, b) => b.year - a.year);
+
+	// Anniversaires dans les 3 prochains jours
+	const upcomingItems = getUpcomingAnniversaries(3).map((ev) => ({
+		isUpcoming: true,
+		label: ev.daysLeft === 1 ? "Demain" : `Dans ${ev.daysLeft} jours`,
+		text: ev.text,
+	}));
+
+	// Si sortie exacte aujourd'hui → carte rich media (remplace tout le bandeau)
+	if (todayReleases.length > 0) {
+		// Construit les pills en parallèle
+		const pills = await Promise.all(todayReleases.map(buildReleaseCard));
+		banner.innerHTML = "";
+		if (pills.length === 1) {
+			banner.appendChild(pills[0]);
+		} else {
+			let idx = 0;
+			const prev = document.createElement("button");
+			prev.className = "banner-nav banner-prev";
+			prev.textContent = "‹";
+			const next = document.createElement("button");
+			next.className = "banner-nav banner-next";
+			next.textContent = "›";
+			const slot = document.createElement("div");
+			slot.className = "release-pill-slot";
+			slot.appendChild(pills[0]);
+			function show(i) {
+				slot.innerHTML = "";
+				slot.appendChild(pills[i]);
+			}
+			prev.addEventListener("click", (e) => {
+				e.stopPropagation();
+				idx = (idx - 1 + pills.length) % pills.length;
+				show(idx);
+			});
+			next.addEventListener("click", (e) => {
+				e.stopPropagation();
+				idx = (idx + 1) % pills.length;
+				show(idx);
+			});
+			banner.append(prev, slot, next);
+		}
+		banner.classList.remove("hidden");
+		return;
+	}
+
+	// Pas de sortie exacte aujourd'hui → bandeau texte classique
+	const slides = [
+		...todayAnnis.map((e) => ({ text: formatEventText(e, year) })),
+		...upcomingItems.map((u) => ({ text: `${u.label} — ${u.text}` })),
+	];
+
+	if (slides.length === 0) {
+		banner.classList.add("hidden");
+		return;
+	}
+
+	if (slides.length === 1) {
+		banner.innerHTML = `<span>${slides[0].text}</span>`;
+		banner.classList.remove("hidden");
+		return;
+	}
+
+	// Carrousel texte multi-slides
+	let currentIdx = 0;
+
+	function renderBannerSlide() {
+		const text = slides[currentIdx].text;
+		const dots = slides
+			.map(
+				(_, i) =>
+					`<span class="banner-dot${i === currentIdx ? " active" : ""}"></span>`,
+			)
+			.join("");
+		banner.innerHTML = `
+			<button class="banner-nav banner-prev" title="Précédent">‹</button>
+			<div class="banner-slide-content">
+				<span>${text}</span>
+				<div class="banner-dots">${dots}</div>
+			</div>
+			<button class="banner-nav banner-next" title="Suivant">›</button>
+		`;
+		banner.querySelector(".banner-prev").addEventListener("click", (e) => {
+			e.stopPropagation();
+			currentIdx = (currentIdx - 1 + slides.length) % slides.length;
+			renderBannerSlide();
+		});
+		banner.querySelector(".banner-next").addEventListener("click", (e) => {
+			e.stopPropagation();
+			currentIdx = (currentIdx + 1) % slides.length;
+			renderBannerSlide();
+		});
+	}
+
+	renderBannerSlide();
+	banner.classList.remove("hidden");
+
+	clearInterval(bannerInterval);
+	bannerInterval = setInterval(() => {
+		currentIdx = (currentIdx + 1) % slides.length;
+		renderBannerSlide();
+	}, 6000);
+}
+
+// ---------------------------------------------------------------------------
+// EVENTS — countdown prochain événement
+// ---------------------------------------------------------------------------
+
+// Encadré countdown : uniquement les sorties exactes futures (year > aujourd'hui).
+// Les anniversaires n'apparaissent jamais ici.
+function getNextUpcomingEvent() {
+	if (!currentUser || eventsData.length === 0) return null;
+
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+	const futureExact = eventsData
+		.filter((e) => {
+			const d = new Date(e.year, e.month - 1, e.day);
+			return d >= today && isEventForProfile(e, currentUser);
+		})
+		.sort(
+			(a, b) =>
+				new Date(a.year, a.month - 1, a.day) -
+				new Date(b.year, b.month - 1, b.day),
+		);
+
+	if (futureExact.length === 0) return null;
+
+	const e = futureExact[0];
+	const evDate = new Date(e.year, e.month - 1, e.day);
+	const daysLeft = Math.round((evDate - today) / 86_400_000);
+	return {
+		daysLeft,
+		text: formatEventText(e, e.year),
+		date: evDate,
+	};
+}
+
+// Bandeau bas : anniversaires dans les 3 prochains jours (hors aujourd'hui, géré par checkTsEvents).
+function getUpcomingAnniversaries(daysAhead = 3) {
+	if (!currentUser || eventsData.length === 0) return [];
+
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const cy = today.getFullYear();
+	const results = [];
+
+	for (let d = 1; d <= daysAhead; d++) {
+		const checkDate = new Date(today);
+		checkDate.setDate(today.getDate() + d);
+		const cm = checkDate.getMonth() + 1;
+		const cd = checkDate.getDate();
+
+		eventsData
+			.filter(
+				(e) =>
+					e.month === cm &&
+					e.day === cd &&
+					e.year < cy &&
+					isEventForProfile(e, currentUser),
+			)
+			.forEach((e) => {
+				results.push({
+					daysLeft: d,
+					text: formatEventText(e, cy),
+					date: checkDate,
+				});
+			});
+	}
+	return results;
+}
+
+function renderCountdown() {
+	const existing = document.getElementById("event-countdown");
+	if (existing) existing.remove();
+
+	const ev = getNextUpcomingEvent();
+	// Si l'événement est aujourd'hui, il est géré par le bandeau du bas — on n'affiche pas ici
+	if (!ev || ev.daysLeft === 0) return;
+
+	const label = ev.daysLeft === 1 ? "Demain" : `J-${ev.daysLeft}`;
+
+	const el = document.createElement("div");
+	el.id = "event-countdown";
+	el.innerHTML = `
+		<div class="cd-days">${label}</div>
+		<div class="cd-sep"></div>
+		<div class="cd-text">${ev.text.trim()}</div>
+	`;
+
+	const clockWrapper = document.getElementById("clock-wrapper");
+	if (clockWrapper?.parentNode) clockWrapper.after(el);
+}
+
+// ---------------------------------------------------------------------------
+// BIENVENUE
+// ---------------------------------------------------------------------------
+
+function updateWelcome(user) {
+	const h = new Date().getHours();
+	const [greeting, emoji] =
+		h >= 5 && h < 12
+			? ["Bonjour", "☀️"]
+			: h >= 12 && h < 18
+				? ["Bon après-midi", "🌤️"]
+				: h >= 18 && h < 22
+					? ["Bonsoir", "🌙"]
+					: ["Bonne nuit", "🌙"];
+
+	const el = document.getElementById("welcome-msg");
+	if (el) el.textContent = `${greeting}, ${getDisplayName(user)} ${emoji}`;
+}
+
+// ---------------------------------------------------------------------------
+// HORLOGE
+// ---------------------------------------------------------------------------
+
+function updateClock() {
+	const now = new Date();
+	const s = now.getSeconds(),
+		m = now.getMinutes(),
+		h = now.getHours();
+	const mDeg = m * 6 + s * 0.1;
+	const hDeg = (h % 12) * 30 + m * 0.5;
+
+	document
+		.getElementById("hour-g")
+		?.setAttribute("transform", `rotate(${hDeg}, 100, 100)`);
+	document
+		.getElementById("minute-g")
+		?.setAttribute("transform", `rotate(${mDeg}, 100, 100)`);
+
+	const day = String(now.getDate()).padStart(2, "0");
+	const month = String(now.getMonth() + 1).padStart(2, "0");
+	const left = document.getElementById("date-left");
+	const right = document.getElementById("date-right");
+	if (left) left.textContent = `${day}/${month}`;
+	if (right) right.textContent = now.getFullYear();
+}
+
+function applyClockVisibility(user) {
+	const wrapper = document.getElementById("clock-wrapper");
+	if (wrapper) wrapper.style.display = isClockVisible(user) ? "" : "none";
+}
+
+// ---------------------------------------------------------------------------
+// THEME COLOR
+// ---------------------------------------------------------------------------
+
+function extractDominantColor(imgSrc, callback) {
+	const canvas = document.createElement("canvas");
+	const ctx = canvas.getContext("2d");
+	const img = new Image();
+	img.crossOrigin = "anonymous";
+	img.onload = () => {
+		canvas.width = canvas.height = 50;
+		ctx.drawImage(img, 0, 0, 50, 50);
+		const data = ctx.getImageData(0, 0, 50, 50).data;
+		let r = 0,
+			g = 0,
+			b = 0,
+			count = 0;
+		for (let i = 0; i < data.length; i += 4) {
+			const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+			if (brightness < 20 || brightness > 235) continue;
+			r += data[i];
+			g += data[i + 1];
+			b += data[i + 2];
+			count++;
+		}
+		if (count === 0) {
+			callback("#1a1a2e");
+			return;
+		}
+		callback(
+			`rgb(${Math.round((r / count) * 0.6)},${Math.round((g / count) * 0.6)},${Math.round((b / count) * 0.6)})`,
+		);
+	};
+	img.onerror = () => callback("#1a1a2e");
+	img.src = imgSrc;
+}
+
+function setThemeColor(color) {
+	let meta = document.querySelector('meta[name="theme-color"]');
+	if (!meta) {
+		meta = document.createElement("meta");
+		meta.name = "theme-color";
+		document.head.appendChild(meta);
+	}
+	meta.content = color;
+}
+
+// ---------------------------------------------------------------------------
+// CHARGEMENT PROFIL
+// ---------------------------------------------------------------------------
+
+function loadProfile(name) {
+	const data = profiles[name];
+	if (!data) return;
+	currentUser = name;
+
+	const randomImg =
+		data.backgrounds[Math.floor(Math.random() * data.backgrounds.length)];
+	const bgEl = document.getElementById("bg");
+	const img = new Image();
+	img.src = `backgrounds/${randomImg}`;
+	img.onload = () => {
+		bgEl.style.backgroundImage = `url('${img.src}')`;
+		bgEl.style.opacity = "1";
+		extractDominantColor(img.src, setThemeColor);
+	};
+
+	updateWelcome(name);
+	renderShortcuts(name);
+	renderArtistStores();
+	applyClockVisibility(name);
+	clearInterval(bannerInterval);
+	checkTsEvents(); // async, pas besoin d'await ici (fire-and-forget)
+	renderCountdown();
+	document.getElementById("search-input").focus();
+}
+
+// ---------------------------------------------------------------------------
+// SÉLECTEUR DE PROFIL
+// ---------------------------------------------------------------------------
+
+function initUserSelector() {
+	const btnContainer = document.querySelector(".user-buttons");
+	if (!btnContainer) return;
+	btnContainer.innerHTML = "";
+	Object.keys(profiles).forEach((name) => {
+		const btn = document.createElement("button");
+		btn.textContent = getDisplayName(name);
+		btn.addEventListener("click", () => {
+			try {
+				localStorage.setItem("currentUser", name);
+			} catch (e) {
+				console.warn(e);
+			}
+			document.getElementById("user-selector").classList.add("hidden");
+			loadProfile(name);
+		});
+		btnContainer.appendChild(btn);
+	});
+}
+
+// ---------------------------------------------------------------------------
+// DRAG & DROP RACCOURCIS
+// ---------------------------------------------------------------------------
+
 let dragSrc = null;
 
 function initDragDrop(container, user) {
@@ -329,14 +880,12 @@ function initDragDrop(container, user) {
 		dragSrc.classList.add("dragging");
 		e.dataTransfer.effectAllowed = "move";
 	});
-
 	container.addEventListener("dragend", () => {
 		document
 			.querySelectorAll(".shortcut-item")
 			.forEach((el) => el.classList.remove("dragging", "drag-over"));
 		dragSrc = null;
 	});
-
 	container.addEventListener("dragover", (e) => {
 		e.preventDefault();
 		const target = e.target.closest(".shortcut-item");
@@ -347,16 +896,13 @@ function initDragDrop(container, user) {
 		target.classList.add("drag-over");
 		e.dataTransfer.dropEffect = "move";
 	});
-
 	container.addEventListener("drop", (e) => {
 		e.preventDefault();
 		const target = e.target.closest(".shortcut-item");
 		if (!target || target === dragSrc) return;
-
 		const items = [...container.querySelectorAll(".shortcut-item")];
 		const fromIdx = items.indexOf(dragSrc);
 		const toIdx = items.indexOf(target);
-
 		const shortcuts = getShortcuts(user);
 		const [moved] = shortcuts.splice(fromIdx, 1);
 		shortcuts.splice(toIdx, 0, moved);
@@ -365,25 +911,27 @@ function initDragDrop(container, user) {
 	});
 }
 
-// --- Rendu des raccourcis ---
+// ---------------------------------------------------------------------------
+// RACCOURCIS — rendu
+// ---------------------------------------------------------------------------
+
 function renderShortcuts(user) {
 	const shortcuts = getShortcuts(user);
 	const container = document.getElementById("shortcuts");
 	container.innerHTML = "";
 
 	shortcuts.forEach((s, i) => {
+		let el;
 		if (s.type === "folder") {
-			const item = createFolderItem(s, i, user);
-			item.style.animationDelay = `${i * 0.08}s`;
-			container.appendChild(item);
+			el = createFolderItem(s, i, user);
 		} else {
 			const icon = `https://www.google.com/s2/favicons?sz=64&domain=${new URL(s.url).hostname}`;
-			const link = document.createElement("a");
-			link.className = "shortcut-item";
-			link.href = s.url;
-			link.draggable = true;
-			link.style.animationDelay = `${i * 0.08}s`;
-			link.dataset.index = i;
+			el = document.createElement("a");
+			el.className = "shortcut-item";
+			el.href = s.url;
+			el.draggable = true;
+			el.dataset.index = i;
+			el.innerHTML = `<div class="icon-wrapper"><img src="${icon}"></div><span>${s.name}</span>`;
 
 			const removeBtn = document.createElement("button");
 			removeBtn.className = "shortcut-remove";
@@ -392,33 +940,38 @@ function renderShortcuts(user) {
 			removeBtn.addEventListener("click", (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				const updated = getShortcuts(user).filter((_, idx) => idx !== i);
-				saveShortcuts(user, updated);
+				saveShortcuts(
+					user,
+					getShortcuts(user).filter((_, idx) => idx !== i),
+				);
 				renderShortcuts(user);
 			});
+			el.appendChild(removeBtn);
 
-			link.innerHTML = `<div class="icon-wrapper"><img src="${icon}"></div><span>${s.name}</span>`;
-			link.appendChild(removeBtn);
-
-			// Clic droit → menu contextuel
-			link.addEventListener("contextmenu", (e) => {
+			el.addEventListener("contextmenu", (e) => {
 				e.preventDefault();
 				showContextMenu(e.clientX, e.clientY, i, user);
 			});
-
-			container.appendChild(link);
 		}
+		el.style.animationDelay = `${i * 0.08}s`;
+		container.appendChild(el);
 	});
 
 	initDragDrop(container, user);
 }
 
-// --- Dossier item ---
+// ---------------------------------------------------------------------------
+// DOSSIERS
+// ---------------------------------------------------------------------------
+
+let openFolderIndex = null;
+
 function createFolderItem(folder, index, user) {
 	const item = document.createElement("div");
 	item.className = "shortcut-item folder-item";
 	item.draggable = true;
 	item.dataset.index = index;
+	item.innerHTML = `<div class="icon-wrapper folder-icon-wrapper"><span class="folder-emoji">📁</span></div><span>${folder.name}</span>`;
 
 	const removeBtn = document.createElement("button");
 	removeBtn.className = "shortcut-remove";
@@ -427,33 +980,26 @@ function createFolderItem(folder, index, user) {
 	removeBtn.addEventListener("click", (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		const updated = getShortcuts(user).filter((_, idx) => idx !== index);
-		saveShortcuts(user, updated);
+		saveShortcuts(
+			user,
+			getShortcuts(user).filter((_, idx) => idx !== index),
+		);
 		renderShortcuts(user);
 		closeFolderPopup();
 	});
-
-	item.innerHTML = `<div class="icon-wrapper folder-icon-wrapper"><span class="folder-emoji">📁</span></div><span>${folder.name}</span>`;
 	item.appendChild(removeBtn);
 
-	// Clic droit → menu contextuel
 	item.addEventListener("contextmenu", (e) => {
 		e.preventDefault();
 		showFolderContextMenu(e.clientX, e.clientY, index, user);
 	});
-
-	// Clic → ouvre le popup du dossier
 	item.addEventListener("click", (e) => {
 		if (e.target === removeBtn) return;
 		e.preventDefault();
 		toggleFolderPopup(folder, index, item, user);
 	});
-
 	return item;
 }
-
-// --- Popup dossier ---
-let openFolderIndex = null;
 
 function toggleFolderPopup(folder, index, anchorEl, user) {
 	const popup = document.getElementById("folder-popup");
@@ -502,7 +1048,7 @@ function toggleFolderPopup(folder, index, anchorEl, user) {
 		popup.appendChild(row);
 	});
 
-	if (!folder.links || folder.links.length === 0) {
+	if (!folder.links?.length) {
 		const empty = document.createElement("div");
 		empty.className = "folder-popup-empty";
 		empty.textContent = "Dossier vide — cliquez + pour ajouter";
@@ -510,19 +1056,15 @@ function toggleFolderPopup(folder, index, anchorEl, user) {
 	}
 
 	popup.classList.remove("hidden");
-	const rect = anchorEl.getBoundingClientRect();
-	popup.style.left = `${rect.left + rect.width / 2 - popup.offsetWidth / 2}px`;
-	popup.style.top = `${rect.top - popup.offsetHeight - 10}px`;
-
 	requestAnimationFrame(() => {
+		const rect = anchorEl.getBoundingClientRect();
 		popup.style.left = `${rect.left + rect.width / 2 - popup.offsetWidth / 2}px`;
 		popup.style.top = `${rect.top - popup.offsetHeight - 10}px`;
 	});
 }
 
 function closeFolderPopup() {
-	const popup = document.getElementById("folder-popup");
-	popup.classList.add("hidden");
+	document.getElementById("folder-popup").classList.add("hidden");
 	openFolderIndex = null;
 }
 
@@ -538,7 +1080,10 @@ function openAddLinkToFolder(folderIndex, user) {
 	modal.dataset.folderIndex = folderIndex;
 }
 
-// --- Menu contextuel clic droit ---
+// ---------------------------------------------------------------------------
+// MENU CONTEXTUEL RACCOURCI (clic droit)
+// ---------------------------------------------------------------------------
+
 let contextTarget = null;
 
 function showContextMenu(x, y, index, user) {
@@ -548,7 +1093,6 @@ function showContextMenu(x, y, index, user) {
 	menu.classList.remove("hidden");
 	menu.style.left = `${x}px`;
 	menu.style.top = `${y}px`;
-
 	requestAnimationFrame(() => {
 		const rect = menu.getBoundingClientRect();
 		if (rect.right > window.innerWidth) menu.style.left = `${x - rect.width}px`;
@@ -566,10 +1110,8 @@ function showFolderContextMenu(x, y, index, user) {
 	menu.style.top = `${y}px`;
 }
 
-// --- Fermeture menu contextuel ---
 function closeContextMenu() {
-	const menu = document.getElementById("shortcut-context-menu");
-	menu.classList.add("hidden");
+	document.getElementById("shortcut-context-menu").classList.add("hidden");
 	contextTarget = null;
 }
 
@@ -578,32 +1120,28 @@ function initContextMenu() {
 		if (!contextTarget) return;
 		const { index, user, isFolder } = contextTarget;
 		closeContextMenu();
-		if (isFolder) {
-			openEditFolder(index, user);
-		} else {
-			openEditShortcut(index, user);
-		}
+		isFolder ? openEditFolder(index, user) : openEditShortcut(index, user);
 	});
 
 	document.getElementById("ctx-delete").addEventListener("click", () => {
 		if (!contextTarget) return;
 		const { index, user } = contextTarget;
 		closeContextMenu();
-		const updated = getShortcuts(user).filter((_, idx) => idx !== index);
-		saveShortcuts(user, updated);
+		saveShortcuts(
+			user,
+			getShortcuts(user).filter((_, idx) => idx !== index),
+		);
 		renderShortcuts(user);
 	});
 
 	document.addEventListener("click", (e) => {
-		if (!document.getElementById("shortcut-context-menu").contains(e.target)) {
+		if (!document.getElementById("shortcut-context-menu").contains(e.target))
 			closeContextMenu();
-		}
 		if (
 			!document.getElementById("folder-popup").contains(e.target) &&
 			!e.target.closest(".folder-item")
-		) {
+		)
 			closeFolderPopup();
-		}
 	});
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
@@ -613,24 +1151,22 @@ function initContextMenu() {
 	});
 }
 
-// --- Modale édition raccourci ---
+// ---------------------------------------------------------------------------
+// MODAL ÉDITION RACCOURCI
+// ---------------------------------------------------------------------------
+
 function initEditShortcutModal() {
 	const modal = document.getElementById("edit-shortcut-modal");
+
 	document
 		.getElementById("edit-shortcut-cancel")
-		.addEventListener("click", () => {
-			modal.classList.add("hidden");
-		});
+		.addEventListener("click", () => modal.classList.add("hidden"));
 	document
 		.getElementById("edit-shortcut-confirm")
-		.addEventListener("click", () => {
-			saveEditedShortcut();
-		});
-	[
-		document.getElementById("edit-shortcut-name"),
-		document.getElementById("edit-shortcut-url"),
-	].forEach((input) => {
-		input.addEventListener("keydown", (e) => {
+		.addEventListener("click", saveEditedShortcut);
+
+	["edit-shortcut-name", "edit-shortcut-url"].forEach((id) => {
+		document.getElementById(id).addEventListener("keydown", (e) => {
 			if (e.key === "Enter") saveEditedShortcut();
 			if (e.key === "Escape") modal.classList.add("hidden");
 		});
@@ -644,10 +1180,14 @@ function openEditShortcut(index, user) {
 	const s = getShortcuts(user)[index];
 	if (!s) return;
 	const modal = document.getElementById("edit-shortcut-modal");
+	const urlInput = document.getElementById("edit-shortcut-url");
 	document.getElementById("edit-shortcut-name").value = s.name;
-	document.getElementById("edit-shortcut-url").value = s.url;
+	urlInput.value = s.url;
+	urlInput.disabled = false;
+	urlInput.placeholder = "URL";
 	modal.dataset.index = index;
 	modal.dataset.user = user;
+	delete modal.dataset.isFolder;
 	modal.classList.remove("hidden");
 	document.getElementById("edit-shortcut-name").focus();
 }
@@ -656,11 +1196,11 @@ function openEditFolder(index, user) {
 	const s = getShortcuts(user)[index];
 	if (!s) return;
 	const modal = document.getElementById("edit-shortcut-modal");
+	const urlInput = document.getElementById("edit-shortcut-url");
 	document.getElementById("edit-shortcut-name").value = s.name;
-	document.getElementById("edit-shortcut-url").value = "";
-	document.getElementById("edit-shortcut-url").placeholder =
-		"(dossier — pas d'URL)";
-	document.getElementById("edit-shortcut-url").disabled = true;
+	urlInput.value = "";
+	urlInput.placeholder = "(dossier — pas d'URL)";
+	urlInput.disabled = true;
 	modal.dataset.index = index;
 	modal.dataset.user = user;
 	modal.dataset.isFolder = "true";
@@ -675,6 +1215,7 @@ function saveEditedShortcut() {
 	const isFolder = modal.dataset.isFolder === "true";
 	const name = document.getElementById("edit-shortcut-name").value.trim();
 	let url = document.getElementById("edit-shortcut-url").value.trim();
+
 	if (!name) return;
 	const shortcuts = getShortcuts(user);
 	if (isFolder) {
@@ -687,193 +1228,19 @@ function saveEditedShortcut() {
 	}
 	saveShortcuts(user, shortcuts);
 	renderShortcuts(user);
+
+	// Reset
 	modal.classList.add("hidden");
-	modal.dataset.isFolder = "";
-	document.getElementById("edit-shortcut-url").disabled = false;
-	document.getElementById("edit-shortcut-url").placeholder = "URL";
+	delete modal.dataset.isFolder;
+	const urlInput = document.getElementById("edit-shortcut-url");
+	urlInput.disabled = false;
+	urlInput.placeholder = "URL";
 }
 
-// --- Modale création dossier ---
-function initFolderModal() {
-	const modal = document.getElementById("folder-modal");
-	document.getElementById("add-folder-btn").addEventListener("click", () => {
-		document.getElementById("folder-name").value = "";
-		modal.classList.remove("hidden");
-		document.getElementById("folder-name").focus();
-	});
-	document.getElementById("folder-cancel").addEventListener("click", () => {
-		modal.classList.add("hidden");
-	});
-	document.getElementById("folder-confirm").addEventListener("click", () => {
-		createFolder();
-	});
-	document.getElementById("folder-name").addEventListener("keydown", (e) => {
-		if (e.key === "Enter") createFolder();
-		if (e.key === "Escape") modal.classList.add("hidden");
-	});
-	modal.addEventListener("click", (e) => {
-		if (e.target === modal) modal.classList.add("hidden");
-	});
-}
+// ---------------------------------------------------------------------------
+// MODAL AJOUT RACCOURCI
+// ---------------------------------------------------------------------------
 
-function createFolder() {
-	const modal = document.getElementById("folder-modal");
-	const name = document.getElementById("folder-name").value.trim();
-	if (!name || !currentUser) return;
-	const shortcuts = getShortcuts(currentUser);
-	shortcuts.push({ type: "folder", name, links: [] });
-	saveShortcuts(currentUser, shortcuts);
-	renderShortcuts(currentUser);
-	modal.classList.add("hidden");
-}
-
-// --- Theme color navigateur ---
-function extractDominantColor(imgSrc, callback) {
-	const canvas = document.createElement("canvas");
-	const ctx = canvas.getContext("2d");
-	const img = new Image();
-	img.crossOrigin = "anonymous";
-	img.onload = () => {
-		canvas.width = 50;
-		canvas.height = 50;
-		ctx.drawImage(img, 0, 0, 50, 50);
-
-		const data = ctx.getImageData(0, 0, 50, 50).data;
-		let r = 0,
-			g = 0,
-			b = 0,
-			count = 0;
-
-		for (let i = 0; i < data.length; i += 4) {
-			const pr = data[i],
-				pg = data[i + 1],
-				pb = data[i + 2];
-			const brightness = (pr + pg + pb) / 3;
-			if (brightness < 20 || brightness > 235) continue;
-			r += pr;
-			g += pg;
-			b += pb;
-			count++;
-		}
-
-		if (count === 0) {
-			callback("#1a1a2e");
-			return;
-		}
-		r = Math.round((r / count) * 0.6);
-		g = Math.round((g / count) * 0.6);
-		b = Math.round((b / count) * 0.6);
-		callback(`rgb(${r},${g},${b})`);
-	};
-	img.onerror = () => {
-		console.warn("[theme] extractDominantColor failed for", imgSrc);
-		callback("#1a1a2e");
-	};
-	img.src = imgSrc;
-}
-
-function setThemeColor(color) {
-	let meta = document.querySelector('meta[name="theme-color"]');
-	if (!meta) {
-		meta = document.createElement("meta");
-		meta.name = "theme-color";
-		document.head.appendChild(meta);
-	}
-	meta.content = color;
-}
-
-// --- Chargement du profil ---
-function loadProfile(name) {
-	const data = profiles[name];
-	if (!data) return;
-	currentUser = name;
-
-	const randomImg =
-		data.backgrounds[Math.floor(Math.random() * data.backgrounds.length)];
-	const bgElement = document.getElementById("bg");
-	const img = new Image();
-	img.src = `backgrounds/${randomImg}`;
-	img.onload = () => {
-		bgElement.style.backgroundImage = `url('${img.src}')`;
-		bgElement.style.opacity = "1";
-		extractDominantColor(img.src, setThemeColor);
-	};
-
-	updateWelcome(name);
-	renderShortcuts(name);
-	renderArtistStores();
-	applyClockVisibility(name);
-	clearInterval(window._bannerInterval);
-	checkTsEvents();
-	renderCountdown();
-	document.getElementById("search-input").focus();
-}
-
-// --- Horloge ---
-function updateClock() {
-	const now = new Date();
-	const s = now.getSeconds(),
-		m = now.getMinutes(),
-		h = now.getHours();
-	const mDeg = m * 6 + s * 0.1;
-	const hDeg = (h % 12) * 30 + m * 0.5;
-
-	const hourG = document.getElementById("hour-g");
-	const minG = document.getElementById("minute-g");
-	if (hourG) hourG.setAttribute("transform", `rotate(${hDeg}, 100, 100)`);
-	if (minG) minG.setAttribute("transform", `rotate(${mDeg}, 100, 100)`);
-
-	const day = String(now.getDate()).padStart(2, "0");
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const year = now.getFullYear();
-	const left = document.getElementById("date-left");
-	const right = document.getElementById("date-right");
-	if (left) left.textContent = `${day}/${month}`;
-	if (right) right.textContent = year;
-}
-
-// --- Helpers horloge & filtre événements ---
-function isClockVisible(user) {
-	const v = localStorage.getItem(`clockVisible_${user}`);
-	return v === null ? true : v === "true";
-}
-function saveClockVisible(user, val) {
-	localStorage.setItem(`clockVisible_${user}`, String(val));
-}
-function isEventsFiltered(user) {
-	return localStorage.getItem(`eventsFilter_${user}`) === "true";
-}
-function saveEventsFilter(user, val) {
-	localStorage.setItem(`eventsFilter_${user}`, String(val));
-}
-function applyClockVisibility(user) {
-	const wrapper = document.getElementById("clock-wrapper");
-	if (!wrapper) return;
-	wrapper.style.display = isClockVisible(user) ? "" : "none";
-}
-
-// --- Sélecteur de profil ---
-function initUserSelector() {
-	const btnContainer = document.querySelector(".user-buttons");
-	if (!btnContainer) return;
-	btnContainer.innerHTML = "";
-	Object.keys(profiles).forEach((name) => {
-		const btn = document.createElement("button");
-		btn.textContent = getDisplayName(name);
-		btn.addEventListener("click", () => {
-			try {
-				localStorage.setItem("currentUser", name);
-			} catch (e) {
-				console.warn(e);
-			}
-			document.getElementById("user-selector").classList.add("hidden");
-			loadProfile(name);
-		});
-		btnContainer.appendChild(btn);
-	});
-}
-
-// --- Modale ajout raccourci ---
 function initShortcutModal() {
 	const modal = document.getElementById("shortcut-modal");
 	const nameInput = document.getElementById("shortcut-name");
@@ -892,28 +1259,26 @@ function initShortcutModal() {
 		modal.classList.add("hidden");
 	});
 
-	// BUG FIX: auto-remplissage du nom depuis l'URL
+	// Auto-remplissage du nom depuis l'URL
 	urlInput.addEventListener("blur", () => {
-		if (urlInput.value.trim() && !nameInput.value.trim()) {
-			try {
-				let url = urlInput.value.trim();
-				if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-				const hostname = new URL(url).hostname.replace(/^www\./, "");
-				const parts = hostname.split(".");
-				const domain = parts[0];
-				nameInput.value = domain.charAt(0).toUpperCase() + domain.slice(1);
-			} catch {}
-		}
+		if (!urlInput.value.trim() || nameInput.value.trim()) return;
+		try {
+			let url = urlInput.value.trim();
+			if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+			const hostname = new URL(url).hostname.replace(/^www\./, "");
+			const domain = hostname.split(".")[0];
+			nameInput.value = domain.charAt(0).toUpperCase() + domain.slice(1);
+		} catch {}
 	});
 
 	document.getElementById("shortcut-confirm").addEventListener("click", () => {
-		let name = nameInput.value.trim();
+		const name = nameInput.value.trim();
 		let url = urlInput.value.trim();
 		if (!name || !url) return;
 		if (!/^https?:\/\//i.test(url)) url = "https://" + url;
 
-		// Ajout dans dossier ou en raccourci normal
 		if (modal.dataset.folderIndex !== undefined) {
+			// Ajout dans un dossier
 			const fi = parseInt(modal.dataset.folderIndex);
 			const shortcuts = getShortcuts(currentUser);
 			if (!shortcuts[fi].links) shortcuts[fi].links = [];
@@ -925,7 +1290,7 @@ function initShortcutModal() {
 			);
 			if (folderEl) toggleFolderPopup(shortcuts[fi], fi, folderEl, currentUser);
 		} else {
-			// BUG FIX: vérification doublon
+			// Vérification doublon
 			const shortcuts = getShortcuts(currentUser);
 			if (shortcuts.some((s) => s.url === url)) {
 				urlInput.style.borderColor = "rgba(255,80,80,0.6)";
@@ -951,25 +1316,65 @@ function initShortcutModal() {
 			if (e.key === "Escape") modal.classList.add("hidden");
 		});
 	});
-
 	modal.addEventListener("click", (e) => {
 		if (e.target === modal) modal.classList.add("hidden");
 	});
 }
 
-// --- Modale config ---
+// ---------------------------------------------------------------------------
+// MODAL CRÉATION DOSSIER
+// ---------------------------------------------------------------------------
+
+function initFolderModal() {
+	const modal = document.getElementById("folder-modal");
+
+	document.getElementById("add-folder-btn").addEventListener("click", () => {
+		document.getElementById("folder-name").value = "";
+		modal.classList.remove("hidden");
+		document.getElementById("folder-name").focus();
+	});
+	document
+		.getElementById("folder-cancel")
+		.addEventListener("click", () => modal.classList.add("hidden"));
+	document
+		.getElementById("folder-confirm")
+		.addEventListener("click", createFolder);
+	document.getElementById("folder-name").addEventListener("keydown", (e) => {
+		if (e.key === "Enter") createFolder();
+		if (e.key === "Escape") modal.classList.add("hidden");
+	});
+	modal.addEventListener("click", (e) => {
+		if (e.target === modal) modal.classList.add("hidden");
+	});
+}
+
+function createFolder() {
+	const modal = document.getElementById("folder-modal");
+	const name = document.getElementById("folder-name").value.trim();
+	if (!name || !currentUser) return;
+	const shortcuts = getShortcuts(currentUser);
+	shortcuts.push({ type: "folder", name, links: [] });
+	saveShortcuts(currentUser, shortcuts);
+	renderShortcuts(currentUser);
+	modal.classList.add("hidden");
+}
+
+// ---------------------------------------------------------------------------
+// MODAL CONFIG
+// ---------------------------------------------------------------------------
+
 function initConfigModal() {
 	const modal = document.getElementById("config-modal");
 
 	document.getElementById("config-btn").addEventListener("click", () => {
 		document.getElementById("config-profile-name").value =
 			getDisplayName(currentUser);
-
 		const clockToggle = document.getElementById("toggle-clock");
 		const eventsToggle = document.getElementById("toggle-events-filter");
 		if (clockToggle) clockToggle.checked = isClockVisible(currentUser);
 		if (eventsToggle) eventsToggle.checked = isEventsFiltered(currentUser);
 
+		// Reset sur onglet Profil
 		modal
 			.querySelectorAll(".config-tab")
 			.forEach((t) => t.classList.remove("active"));
@@ -983,18 +1388,16 @@ function initConfigModal() {
 		modal.classList.remove("hidden");
 	});
 
-	// Toggle horloge
 	document.getElementById("toggle-clock").addEventListener("change", (e) => {
 		saveClockVisible(currentUser, e.target.checked);
 		applyClockVisibility(currentUser);
 	});
 
-	// Toggle filtre événements
 	document
 		.getElementById("toggle-events-filter")
 		.addEventListener("change", (e) => {
 			saveEventsFilter(currentUser, e.target.checked);
-			clearInterval(window._bannerInterval);
+			clearInterval(bannerInterval);
 			checkTsEvents();
 		});
 
@@ -1005,13 +1408,11 @@ function initConfigModal() {
 		modal
 			.querySelectorAll(".config-tab")
 			.forEach((t) => t.classList.remove("active"));
-		["tab-profil", "tab-artistes"].forEach((id) => {
-			const el = document.getElementById(id);
-			if (el) el.classList.add("hidden");
-		});
+		["tab-profil", "tab-artistes"].forEach((id) =>
+			document.getElementById(id)?.classList.add("hidden"),
+		);
 		tab.classList.add("active");
-		const target = document.getElementById("tab-" + tabName);
-		if (target) target.classList.remove("hidden");
+		document.getElementById("tab-" + tabName)?.classList.remove("hidden");
 		if (tabName === "artistes") renderArtistsConfig();
 	});
 
@@ -1037,260 +1438,15 @@ function initConfigModal() {
 				document.getElementById("config-save-name").click();
 			if (e.key === "Escape") modal.classList.add("hidden");
 		});
-
 	modal.addEventListener("click", (e) => {
 		if (e.target === modal) modal.classList.add("hidden");
 	});
 }
 
 // ---------------------------------------------------------------------------
-// ÉVÉNEMENTS GÉRÉS DYNAMIQUEMENT (JSON + LOCALSTORAGE)
+// ARTISTES — sidebar
 // ---------------------------------------------------------------------------
-let EventsOut = [];
-const CUSTOM_EVENTS_KEY = "custom_user_events";
 
-function getCustomEvents() {
-	try {
-		return JSON.parse(localStorage.getItem(CUSTOM_EVENTS_KEY)) || [];
-	} catch {
-		return [];
-	}
-}
-
-function saveCustomEvent(newEvent) {
-	try {
-		const current = getCustomEvents();
-		current.push(newEvent);
-		localStorage.setItem(CUSTOM_EVENTS_KEY, JSON.stringify(current));
-	} catch (e) {
-		console.warn("[storage] saveCustomEvent failed:", e);
-	}
-}
-
-async function loadAllEvents() {
-	try {
-		const response = await fetch("events.json");
-		const localJsonEvents = response.ok ? await response.json() : [];
-		EventsOut = [...localJsonEvents, ...getCustomEvents()];
-	} catch (error) {
-		console.error(
-			"[events] Impossible de charger events.json, repli sur le localStorage :",
-			error,
-		);
-		EventsOut = getCustomEvents();
-	}
-}
-
-function initEventModal() {
-	const modal = document.getElementById("event-modal");
-	const btnAdd = document.getElementById("add-event-btn");
-	const btnCancel = document.getElementById("event-cancel");
-	const btnConfirm = document.getElementById("event-confirm");
-
-	if (!modal || !btnAdd) return;
-
-	btnAdd.addEventListener("click", () => {
-		document.getElementById("event-text").value = "";
-		document.getElementById("event-day").value = new Date().getDate();
-		document.getElementById("event-month").value = new Date().getMonth() + 1;
-		document.getElementById("event-year").value = new Date().getFullYear();
-		modal.classList.remove("hidden");
-		document.getElementById("event-text").focus();
-	});
-
-	btnCancel.addEventListener("click", () => modal.classList.add("hidden"));
-
-	btnConfirm.addEventListener("click", () => {
-		const text = document.getElementById("event-text").value.trim();
-		const day = parseInt(document.getElementById("event-day").value);
-		const month = parseInt(document.getElementById("event-month").value);
-		const year = parseInt(document.getElementById("event-year").value);
-
-		if (!text || isNaN(day) || isNaN(month) || isNaN(year)) return;
-
-		const newEvent = { month, day, year, text };
-		saveCustomEvent(newEvent);
-		EventsOut.push(newEvent);
-
-		checkTsEvents();
-		renderCountdown();
-		modal.classList.add("hidden");
-	});
-
-	modal.addEventListener("click", (e) => {
-		if (e.target === modal) modal.classList.add("hidden");
-	});
-}
-
-// Mapping artiste → profils pour le filtre
-const artistProfileMap = {
-	"Taylor Swift": ["Carotte", "Alex"],
-	"Gracie Abrams": ["Carotte", "Alex"],
-	"Sabrina Carpenter": ["Carotte", "Alex"],
-	"Tate McRae": ["Carotte", "Alex"],
-	"One Direction": ["Carotte", "Alex"],
-	"Niall Horan": ["Carotte", "Alex"],
-	"Harry Styles": ["Carotte", "Alex"],
-	"Louis Tomlinson": ["Carotte", "Alex"],
-	Zayn: ["Carotte", "Alex"],
-	"Liam Payne": ["Carotte", "Alex"],
-};
-
-function getEventArtist(event) {
-	if (event.artist) return event.artist;
-	for (const name of Object.keys(artistProfileMap)) {
-		if (event.text.includes(name)) return name;
-	}
-	return null;
-}
-
-function isEventForProfile(event, user) {
-	if (!isEventsFiltered(user)) return true;
-	const artist = getEventArtist(event);
-	if (!artist) return true;
-	const allowed = artistProfileMap[artist];
-	if (!allowed) return true;
-	return allowed.includes(user);
-}
-
-function checkTsEvents() {
-	const now = new Date();
-	const day = now.getDate();
-	const month = now.getMonth() + 1;
-	const year = now.getFullYear();
-
-	const banner = document.getElementById("ts-event-banner");
-	if (!banner) return;
-
-	const matches = EventsOut.filter(
-		(e) =>
-			e.month === month &&
-			e.day === day &&
-			e.year <= year &&
-			isEventForProfile(e, currentUser),
-	).sort((a, b) => b.year - a.year);
-
-	if (matches.length === 0) {
-		banner.classList.add("hidden");
-		return;
-	}
-
-	// Helper pour injecter proprement la mention "aujourd'hui" ou l'âge exact
-	function formatEventText(e) {
-		const n = year - e.year;
-		if (n === 0) {
-			return (
-				e.text.replace(/(il y a\s*)?\{n\}(\s*ans)?/g, "").trim() +
-				" — c'est aujourd'hui ! 🎉"
-			);
-		} else {
-			return e.text.replace("{n}", `${n}`);
-		}
-	}
-
-	if (matches.length === 1) {
-		banner.innerHTML = `<span>${formatEventText(matches[0])}</span>`;
-		banner.classList.remove("hidden");
-		return;
-	}
-
-	// Carrousel pour plusieurs événements
-	let currentIdx = 0;
-
-	function renderBannerSlide() {
-		const e = matches[currentIdx];
-		const text = formatEventText(e);
-		const dots = matches
-			.map(
-				(_, i) =>
-					`<span class="banner-dot${i === currentIdx ? " active" : ""}"></span>`,
-			)
-			.join("");
-		banner.innerHTML = `
-			<button class="banner-nav banner-prev" title="Précédent">‹</button>
-			<div class="banner-slide-content">
-				<span>${text}</span>
-				<div class="banner-dots">${dots}</div>
-			</div>
-			<button class="banner-nav banner-next" title="Suivant">›</button>
-		`;
-		banner.querySelector(".banner-prev").addEventListener("click", (e) => {
-			e.stopPropagation();
-			currentIdx = (currentIdx - 1 + matches.length) % matches.length;
-			renderBannerSlide();
-		});
-		banner.querySelector(".banner-next").addEventListener("click", (e) => {
-			e.stopPropagation();
-			currentIdx = (currentIdx + 1) % matches.length;
-			renderBannerSlide();
-		});
-	}
-
-	renderBannerSlide();
-	banner.classList.remove("hidden");
-
-	clearInterval(window._bannerInterval);
-	window._bannerInterval = setInterval(() => {
-		currentIdx = (currentIdx + 1) % matches.length;
-		renderBannerSlide();
-	}, 6000);
-}
-
-// --- Helpers désactivation stores ---
-function getDisabledStores(user) {
-	try {
-		return JSON.parse(localStorage.getItem(`disabledStores_${user}`)) || [];
-	} catch {
-		return [];
-	}
-}
-
-function saveDisabledStores(user, list) {
-	try {
-		localStorage.setItem(`disabledStores_${user}`, JSON.stringify(list));
-	} catch (e) {
-		console.warn("[storage] saveDisabledStores failed:", e);
-	}
-}
-
-function isStoreEnabled(user, storeId) {
-	return !getDisabledStores(user).includes(storeId);
-}
-
-function toggleStore(user, storeId) {
-	const disabled = getDisabledStores(user);
-	const idx = disabled.indexOf(storeId);
-	if (idx === -1) disabled.push(storeId);
-	else disabled.splice(idx, 1);
-	saveDisabledStores(user, disabled);
-}
-
-// --- Helpers ordre artistes ---
-function getArtistOrder() {
-	try {
-		return JSON.parse(localStorage.getItem("artistOrder")) || null;
-	} catch {
-		return null;
-	}
-}
-function saveArtistOrder(order) {
-	localStorage.setItem("artistOrder", JSON.stringify(order));
-}
-function getOrderedArtists() {
-	const order = getArtistOrder();
-	if (!order) return [...artists];
-	const map = {};
-	artists.forEach((a) => {
-		map[a.name] = a;
-	});
-	const ordered = order.map((name) => map[name]).filter(Boolean);
-	artists.forEach((a) => {
-		if (!order.includes(a.name)) ordered.push(a);
-	});
-	return ordered;
-}
-
-// --- Rendu du menu artistes (sidebar) ---
 function initArtistStores() {
 	renderArtistStores();
 	document.addEventListener("click", () => {
@@ -1305,10 +1461,10 @@ function renderArtistStores() {
 	if (!container) return;
 	container.innerHTML = "";
 
-	const orderedArtists = getOrderedArtists();
+	const ordered = getOrderedArtists();
 	const categories = {};
 	const catOrder = [];
-	orderedArtists.forEach((artist) => {
+	ordered.forEach((artist) => {
 		const cat = artist.category || "store";
 		if (!categories[cat]) {
 			categories[cat] = [];
@@ -1330,7 +1486,7 @@ function renderArtistStores() {
 			const avatar = document.createElement("div");
 			avatar.className = "artist-avatar";
 			avatar.textContent = artist.initials;
-			applyArtistPhoto(avatar, artist, false);
+			applyArtistPhoto(avatar, artist);
 
 			const labelEl = document.createElement("div");
 			labelEl.className = "artist-label";
@@ -1341,10 +1497,7 @@ function renderArtistStores() {
 
 			const header = document.createElement("div");
 			header.className = "dropdown-header";
-
-			const title = document.createElement("span");
-			title.className = "dropdown-title";
-			title.textContent = artist.name;
+			header.innerHTML = `<span class="dropdown-title">${artist.name}</span>`;
 
 			const openAllBtn = document.createElement("button");
 			openAllBtn.className = "open-all-btn";
@@ -1353,8 +1506,6 @@ function renderArtistStores() {
 				e.stopPropagation();
 				activeStores.forEach((s) => window.open(s.url, "_blank"));
 			});
-
-			header.appendChild(title);
 			header.appendChild(openAllBtn);
 			dropdown.appendChild(header);
 
@@ -1372,10 +1523,7 @@ function renderArtistStores() {
 				dropdown.appendChild(link);
 			});
 
-			pill.appendChild(avatar);
-			pill.appendChild(labelEl);
-			pill.appendChild(dropdown);
-
+			pill.append(avatar, labelEl, dropdown);
 			pill.addEventListener("click", (e) => {
 				e.stopPropagation();
 				const isOpen = pill.classList.contains("open");
@@ -1390,16 +1538,19 @@ function renderArtistStores() {
 	});
 }
 
-// --- Rendu de la config artistes avec drag & drop ---
+// ---------------------------------------------------------------------------
+// ARTISTES — config avec drag & drop
+// ---------------------------------------------------------------------------
+
 function renderArtistsConfig() {
 	const list = document.getElementById("artists-config-list");
 	if (!list || !currentUser) return;
 	list.innerHTML = "";
 
-	const orderedArtists = getOrderedArtists();
+	const ordered = getOrderedArtists();
 	const categories = {};
 	const catOrder = [];
-	orderedArtists.forEach((artist) => {
+	ordered.forEach((artist) => {
 		const cat = artist.category || "store";
 		if (!categories[cat]) {
 			categories[cat] = [];
@@ -1412,13 +1563,12 @@ function renderArtistsConfig() {
 	let dragArtist = null;
 
 	catOrder.forEach((cat) => {
-		const artistList = categories[cat];
 		const catTitle = document.createElement("div");
 		catTitle.className = "artists-config-category";
 		catTitle.textContent = catLabels[cat] || cat;
 		list.appendChild(catTitle);
 
-		artistList.forEach((artist) => {
+		categories[cat].forEach((artist) => {
 			const allStoreIds = artist.stores.map((s) => s.id);
 			const allEnabled = allStoreIds.every((id) =>
 				isStoreEnabled(currentUser, id),
@@ -1432,30 +1582,29 @@ function renderArtistsConfig() {
 			artistBlock.draggable = true;
 			artistBlock.dataset.artistName = artist.name;
 
-			const dragHandle = document.createElement("span");
-			dragHandle.className = "artists-config-drag-handle";
-			dragHandle.textContent = "⠿";
-			dragHandle.title = "Réordonner";
-
 			const artistHeader = document.createElement("div");
 			artistHeader.className = "artists-config-artist-header";
 
 			const artistInfo = document.createElement("div");
 			artistInfo.className = "artists-config-artist-info";
 
+			const dragHandle = document.createElement("span");
+			dragHandle.className = "artists-config-drag-handle";
+			dragHandle.textContent = "⠿";
+			dragHandle.title = "Réordonner";
+
 			const initBadge = document.createElement("span");
 			initBadge.className = "artists-config-initials";
 			initBadge.textContent = artist.initials;
-			applyArtistPhoto(initBadge, artist, true);
+			applyArtistPhoto(initBadge, artist);
 
 			const artistName = document.createElement("span");
 			artistName.className = "artists-config-name";
 			artistName.textContent = artist.name;
 
-			artistInfo.appendChild(dragHandle);
-			artistInfo.appendChild(initBadge);
-			artistInfo.appendChild(artistName);
+			artistInfo.append(dragHandle, initBadge, artistName);
 
+			// Toggle maître
 			const masterToggle = document.createElement("label");
 			masterToggle.className = "toggle-switch";
 			const masterInput = document.createElement("input");
@@ -1464,15 +1613,14 @@ function renderArtistsConfig() {
 			masterInput.indeterminate = someEnabled && !allEnabled;
 			const masterSlider = document.createElement("span");
 			masterSlider.className = "toggle-slider";
-			masterToggle.appendChild(masterInput);
-			masterToggle.appendChild(masterSlider);
+			masterToggle.append(masterInput, masterSlider);
 
 			masterInput.addEventListener("change", () => {
 				const disabled = getDisabledStores(currentUser);
 				if (masterInput.checked) {
 					allStoreIds.forEach((id) => {
-						const idx = disabled.indexOf(id);
-						if (idx !== -1) disabled.splice(idx, 1);
+						const i = disabled.indexOf(id);
+						if (i !== -1) disabled.splice(i, 1);
 					});
 				} else {
 					allStoreIds.forEach((id) => {
@@ -1489,11 +1637,10 @@ function renderArtistsConfig() {
 			expandBtn.textContent = "▸";
 			expandBtn.title = "Voir les stores";
 
-			artistHeader.appendChild(artistInfo);
-			artistHeader.appendChild(masterToggle);
-			artistHeader.appendChild(expandBtn);
+			artistHeader.append(artistInfo, masterToggle, expandBtn);
 			artistBlock.appendChild(artistHeader);
 
+			// Liste des stores
 			const storeList = document.createElement("div");
 			storeList.className = "artists-config-stores hidden";
 
@@ -1512,17 +1659,14 @@ function renderArtistsConfig() {
 				storeInput.checked = isStoreEnabled(currentUser, store.id);
 				const storeSlider = document.createElement("span");
 				storeSlider.className = "toggle-slider";
-				storeToggle.appendChild(storeInput);
-				storeToggle.appendChild(storeSlider);
+				storeToggle.append(storeInput, storeSlider);
 
 				storeInput.addEventListener("change", () => {
 					toggleStore(currentUser, store.id);
 					renderArtistsConfig();
 					renderArtistStores();
 				});
-
-				storeRow.appendChild(storeLabel);
-				storeRow.appendChild(storeToggle);
+				storeRow.append(storeLabel, storeToggle);
 				storeList.appendChild(storeRow);
 			});
 
@@ -1533,7 +1677,7 @@ function renderArtistsConfig() {
 
 			artistBlock.appendChild(storeList);
 
-			// Drag & drop artistes
+			// Drag & drop artistes (config)
 			artistBlock.addEventListener("dragstart", (e) => {
 				dragArtist = artistBlock;
 				artistBlock.classList.add("artist-dragging");
@@ -1563,13 +1707,12 @@ function renderArtistsConfig() {
 			artistBlock.addEventListener("drop", (e) => {
 				e.preventDefault();
 				if (!dragArtist || dragArtist === artistBlock) return;
-				const rect = artistBlock.getBoundingClientRect();
-				const midY = rect.top + rect.height / 2;
-				if (e.clientY < midY) {
-					list.insertBefore(dragArtist, artistBlock);
-				} else {
-					artistBlock.after(dragArtist);
-				}
+				const mid =
+					artistBlock.getBoundingClientRect().top +
+					artistBlock.getBoundingClientRect().height / 2;
+				e.clientY < mid
+					? list.insertBefore(dragArtist, artistBlock)
+					: artistBlock.after(dragArtist);
 			});
 
 			list.appendChild(artistBlock);
@@ -1578,89 +1721,9 @@ function renderArtistsConfig() {
 }
 
 // ---------------------------------------------------------------------------
-// COUNTDOWN prochain événement à venir
-// ---------------------------------------------------------------------------
-function getNextUpcomingEvent() {
-	if (!currentUser) return null;
-	const now = new Date();
-	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-	const futureEvents = EventsOut.filter((e) => {
-		const evDate = new Date(e.year, e.month - 1, e.day);
-		return evDate > today && isEventForProfile(e, currentUser);
-	}).sort(
-		(a, b) =>
-			new Date(a.year, a.month - 1, a.day) -
-			new Date(b.year, b.month - 1, b.day),
-	);
-
-	if (futureEvents.length) {
-		const e = futureEvents[0];
-		const evDate = new Date(e.year, e.month - 1, e.day);
-		const daysLeft = Math.round((evDate - today) / 86400000);
-		let text = e.text
-			.replace("{n}", "")
-			.replace(/sortait/g, "sort")
-			.replace(/sortaient/g, "sortent")
-			.replace(/il y a\s*/g, "")
-			.replace(/\s{2,}/g, " ")
-			.trim();
-		return { daysLeft, text, date: evDate };
-	}
-
-	for (let d = 1; d <= 366; d++) {
-		const checkDate = new Date(today);
-		checkDate.setDate(today.getDate() + d);
-		const cm = checkDate.getMonth() + 1;
-		const cd = checkDate.getDate();
-		const cy = checkDate.getFullYear();
-		const found = EventsOut.find(
-			(e) =>
-				e.month === cm &&
-				e.day === cd &&
-				e.year < cy &&
-				isEventForProfile(e, currentUser),
-		);
-		if (found) {
-			const n = cy - found.year;
-			return {
-				daysLeft: d,
-				text: found.text.replace("{n}", `${n}`),
-				date: checkDate,
-			};
-		}
-	}
-	return null;
-}
-
-function renderCountdown() {
-	const existing = document.getElementById("event-countdown");
-	if (existing) existing.remove();
-	const ev = getNextUpcomingEvent();
-	if (!ev) return;
-
-	let label;
-	if (ev.daysLeft === 0) label = "Aujourd'hui";
-	else if (ev.daysLeft === 1) label = "Demain";
-	else label = `J-${ev.daysLeft}`;
-
-	const el = document.createElement("div");
-	el.id = "event-countdown";
-	el.innerHTML = `
-		<div class="cd-days">${label}</div>
-		<div class="cd-sep"></div>
-		<div class="cd-text">${ev.text.trim()}</div>
-	`;
-
-	const clockWrapper = document.getElementById("clock-wrapper");
-	if (clockWrapper && clockWrapper.parentNode) {
-		clockWrapper.after(el);
-	}
-}
-
-// ---------------------------------------------------------------------------
 // PHOTO ARTISTE
 // ---------------------------------------------------------------------------
+
 function getArtistPhotoPath(artist) {
 	const normalized = artist.name
 		.toLowerCase()
@@ -1669,7 +1732,7 @@ function getArtistPhotoPath(artist) {
 	return `imgs/artists/${normalized}.jpg`;
 }
 
-function applyArtistPhoto(el, artist, isConfigBadge) {
+function applyArtistPhoto(el, artist) {
 	const img = new Image();
 	img.src = getArtistPhotoPath(artist);
 	img.onload = () => {
@@ -1681,7 +1744,10 @@ function applyArtistPhoto(el, artist, isConfigBadge) {
 	};
 }
 
-// --- Google Lens Modal ---
+// ---------------------------------------------------------------------------
+// GOOGLE LENS
+// ---------------------------------------------------------------------------
+
 function initLensModal() {
 	const modal = document.getElementById("lens-modal");
 	const closeBtn = document.getElementById("lens-close");
@@ -1694,24 +1760,20 @@ function initLensModal() {
 	const dropInner = document.getElementById("lens-drop-inner");
 	const urlInput = document.getElementById("lens-url-input");
 	const searchBtn = document.getElementById("lens-search-btn");
-
 	let pendingFile = null;
 
 	function resetLens() {
 		pendingFile = null;
-		fileInput.value = "";
-		urlInput.value = "";
+		fileInput.value = urlInput.value = "";
 		previewImg.src = "";
 		preview.classList.add("hidden");
 		dropInner.classList.remove("hidden");
 	}
-
 	function showPreview(src) {
 		previewImg.src = src;
 		dropInner.classList.add("hidden");
 		preview.classList.remove("hidden");
 	}
-
 	function closeLens() {
 		modal.classList.add("hidden");
 	}
@@ -1720,21 +1782,16 @@ function initLensModal() {
 		resetLens();
 		modal.classList.remove("hidden");
 	});
-
 	closeBtn.addEventListener("click", closeLens);
 	modal.addEventListener("click", (e) => {
 		if (e.target === modal) closeLens();
 	});
-	document.addEventListener("keydown", (e) => {
-		if (e.key === "Escape" && !modal.classList.contains("hidden")) closeLens();
-	});
 
 	dropzone.addEventListener("click", (e) => {
-		if (e.target === previewRemove) return;
-		if (!preview.classList.contains("hidden")) return;
+		if (e.target === previewRemove || !preview.classList.contains("hidden"))
+			return;
 		fileInput.click();
 	});
-
 	uploadLink.addEventListener("click", (e) => {
 		e.stopPropagation();
 		fileInput.click();
@@ -1763,7 +1820,7 @@ function initLensModal() {
 		e.preventDefault();
 		dropzone.classList.remove("drag-active");
 		const file = e.dataTransfer.files[0];
-		if (!file || !file.type.startsWith("image/")) return;
+		if (!file?.type.startsWith("image/")) return;
 		pendingFile = file;
 		urlInput.value = "";
 		const reader = new FileReader();
@@ -1813,6 +1870,7 @@ function initLensModal() {
 // ---------------------------------------------------------------------------
 // HISTORIQUE DE RECHERCHE
 // ---------------------------------------------------------------------------
+
 const SEARCH_HISTORY_KEY = "searchHistory";
 const SEARCH_HISTORY_MAX = 12;
 
@@ -1823,15 +1881,14 @@ function getSearchHistory() {
 		return [];
 	}
 }
-
 function saveSearchHistory(history) {
 	localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
 }
-
 function addToSearchHistory(query) {
 	if (!query.trim()) return;
-	let history = getSearchHistory();
-	history = history.filter((h) => h.toLowerCase() !== query.toLowerCase());
+	let history = getSearchHistory().filter(
+		(h) => h.toLowerCase() !== query.toLowerCase(),
+	);
 	history.unshift(query.trim());
 	if (history.length > SEARCH_HISTORY_MAX)
 		history = history.slice(0, SEARCH_HISTORY_MAX);
@@ -1898,22 +1955,17 @@ function initSearchHistory() {
 			del.title = "Supprimer";
 			del.addEventListener("click", (e) => {
 				e.stopPropagation();
-				const h = getSearchHistory().filter((_, idx) => idx !== i);
-				saveSearchHistory(h);
+				saveSearchHistory(getSearchHistory().filter((_, idx) => idx !== i));
 				renderDropdown(input.value);
 			});
 
-			item.appendChild(icon);
-			item.appendChild(text);
-			item.appendChild(del);
-
+			item.append(icon, text, del);
 			item.addEventListener("mousedown", (e) => {
 				e.preventDefault();
 				input.value = query;
 				closeDropdown();
 				form.submit();
 			});
-
 			dropdown.appendChild(item);
 		});
 
@@ -1937,18 +1989,11 @@ function initSearchHistory() {
 		activeIndex = -1;
 	}
 
-	input.addEventListener("focus", () => {
-		renderDropdown(input.value);
-	});
-
-	input.addEventListener("input", () => {
-		renderDropdown(input.value);
-	});
-
+	input.addEventListener("focus", () => renderDropdown(input.value));
+	input.addEventListener("input", () => renderDropdown(input.value));
 	input.addEventListener("keydown", (e) => {
 		const items = [...dropdown.querySelectorAll(".search-history-item")];
 		if (dropdown.classList.contains("hidden") || items.length === 0) return;
-
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
 			activeIndex = Math.min(activeIndex + 1, items.length - 1);
@@ -1977,13 +2022,13 @@ function initSearchHistory() {
 	document.addEventListener("click", (e) => {
 		if (!container.contains(e.target)) closeDropdown();
 	});
-
-	form.addEventListener("submit", () => {
-		addToSearchHistory(input.value);
-	});
+	form.addEventListener("submit", () => addToSearchHistory(input.value));
 }
 
-// --- Init ---
+// ---------------------------------------------------------------------------
+// INIT
+// ---------------------------------------------------------------------------
+
 window.onload = async () => {
 	initUserSelector();
 	initShortcutModal();
@@ -1992,9 +2037,8 @@ window.onload = async () => {
 	initContextMenu();
 	initEditShortcutModal();
 	initFolderModal();
-	initEventModal();
 
-	// Attente indispensable du chargement des événements
+	// Chargement des événements depuis events.json (source unique)
 	await loadAllEvents();
 
 	const savedUser = localStorage.getItem("currentUser");
