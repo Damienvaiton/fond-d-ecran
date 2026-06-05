@@ -566,6 +566,7 @@ function showFolderContextMenu(x, y, index, user) {
 	menu.style.top = `${y}px`;
 }
 
+// --- Fermeture menu contextuel ---
 function closeContextMenu() {
 	const menu = document.getElementById("shortcut-context-menu");
 	menu.classList.add("hidden");
@@ -1043,367 +1044,83 @@ function initConfigModal() {
 }
 
 // ---------------------------------------------------------------------------
-// ÉVÉNEMENTS
+// ÉVÉNEMENTS GÉRÉS DYNAMIQUEMENT (JSON + LOCALSTORAGE)
 // ---------------------------------------------------------------------------
-const EventsOut = [
-	// Taylor Swift — albums
-	{
-		month: 10,
-		day: 24,
-		year: 2006,
-		text: "Taylor Swift sortait son premier album Début il y a {n} 🎸",
-	},
-	{
-		month: 11,
-		day: 11,
-		year: 2008,
-		text: "Taylor Swift sortait son album Fearless il y a {n} 🌟",
-	},
-	{
-		month: 10,
-		day: 25,
-		year: 2010,
-		text: "Taylor Swift sortait son album Speak Now il y a {n} 🎤",
-	},
-	{
-		month: 10,
-		day: 22,
-		year: 2012,
-		text: "Taylor Swift sortait son album Red il y a {n} ❤️",
-	},
-	{
-		month: 10,
-		day: 27,
-		year: 2014,
-		text: "Taylor Swift sortait son album 1989 il y a {n} 🏙️",
-	},
-	{
-		month: 11,
-		day: 10,
-		year: 2017,
-		text: "Taylor Swift sortait son album Reputation il y a {n} 🐍",
-	},
-	{
-		month: 8,
-		day: 23,
-		year: 2019,
-		text: "Taylor Swift sortait son album Lover il y a {n} 💖",
-	},
-	{
-		month: 7,
-		day: 24,
-		year: 2020,
-		text: "Taylor Swift sortait son album Folklore il y a {n} 🌲",
-	},
-	{
-		month: 12,
-		day: 11,
-		year: 2020,
-		text: "Taylor Swift sortait son album Evermore il y a {n} 🌨️",
-	},
-	{
-		month: 4,
-		day: 9,
-		year: 2021,
-		text: "Taylor Swift sortait la Taylor's Version de Fearless il y a {n} 🌙",
-	},
-	{
-		month: 11,
-		day: 12,
-		year: 2021,
-		text: "Taylor Swift sortait la Taylor's Version de Red il y a {n} 🍎",
-	},
-	{
-		month: 10,
-		day: 22,
-		year: 2022,
-		text: "Taylor Swift sortait son album Midnights il y a {n} 🌌",
-	},
-	{
-		month: 7,
-		day: 7,
-		year: 2023,
-		text: "Taylor Swift sortait la Taylor's Version de Speak Now il y a {n} 🎤",
-	},
-	{
-		month: 10,
-		day: 27,
-		year: 2023,
-		text: "Taylor Swift sortait la Taylor's Version de 1989 il y a {n} 🏙️",
-	},
-	{
-		month: 4,
-		day: 19,
-		year: 2024,
-		text: "Taylor Swift sortait son album The Tortured Poets Department il y a {n} 🌙",
-	},
-	{
-		month: 10,
-		day: 3,
-		year: 2025,
-		text: "Taylor Swift sortait son album The Life of a Showgirl il y a {n} 🎭",
-	},
-	// Gracie Abrams
-	{
-		month: 7,
-		day: 14,
-		year: 2020,
-		text: "Gracie Abrams sortait son premier EP Minor il y a {n} 🌙",
-	},
-	{
-		month: 11,
-		day: 12,
-		year: 2021,
-		text: "Gracie Abrams sortait son deuxième EP This Is What It Feels Like il y a {n} 🌙",
-	},
-	{
-		month: 2,
-		day: 24,
-		year: 2023,
-		text: "Gracie Abrams sortait son premier album Good Riddance il y a {n} 🌙",
-	},
-	{
-		month: 6,
-		day: 24,
-		year: 2024,
-		text: "Gracie Abrams sortait son deuxième album The Secret of Us il y a {n} 🌙",
-	},
-	{
-		month: 7,
-		day: 17,
-		year: 2026,
-		text: "Gracie Abrams sortait son troisième album Daughter from Hell il y a {n} 🌙",
-	},
-	// Sabrina Carpenter
-	{
-		month: 4,
-		day: 8,
-		year: 2014,
-		text: "Sabrina Carpenter sortait son premier EP Can't Blame a Girl for Trying il y a {n} 🏆",
-	},
-	{
-		month: 4,
-		day: 14,
-		year: 2015,
-		text: "Sabrina Carpenter sortait son premier album Eyes Wide Open il y a {n} 🏆",
-	},
-	{
-		month: 10,
-		day: 14,
-		year: 2016,
-		text: "Sabrina Carpenter sortait son deuxième album Evolution il y a {n} 🌟",
-	},
-	{
-		month: 11,
-		day: 9,
-		year: 2018,
-		text: "Sabrina Carpenter sortait son troisième album Singular: Act I il y a {n} 🌙",
-	},
-	{
-		month: 7,
-		day: 19,
-		year: 2019,
-		text: "Sabrina Carpenter sortait son quatrième album Singular: Act II il y a {n} 🌙",
-	},
-	{
-		month: 8,
-		day: 11,
-		year: 2017,
-		text: "Sabrina Carpenter sortait son deuxième EP Pandora Sessions il y a {n} 🌟",
-	},
-	{
-		month: 7,
-		day: 15,
-		year: 2022,
-		text: "Sabrina Carpenter sortait son cinquième album Emails I Can't Send il y a {n} 🌙",
-	},
-	{
-		month: 8,
-		day: 23,
-		year: 2024,
-		text: "Sabrina Carpenter sortait son sixième album Short n' Sweet il y a {n} 🌙",
-	},
-	{
-		month: 8,
-		day: 29,
-		year: 2025,
-		text: "Sabrina Carpenter sortait son album Man's Best Friend il y a {n} 🌙",
-	},
-	{
-		month: 11,
-		day: 17,
-		year: 2023,
-		text: "Sabrina Carpenter sortait son troisième EP Fruitcake il y a {n} 🌙",
-	},
-	// One Direction
-	{
-		month: 11,
-		day: 18,
-		year: 2011,
-		text: "One Direction sortaient leur premier album Up All Night il y a {n} 🌟",
-	},
-	{
-		month: 11,
-		day: 9,
-		year: 2012,
-		text: "One Direction sortaient leur deuxième album Take Me Home il y a {n} 🌟",
-	},
-	{
-		month: 11,
-		day: 25,
-		year: 2013,
-		text: "One Direction sortaient leur troisième album Midnight Memories il y a {n} 🌟",
-	},
-	{
-		month: 11,
-		day: 17,
-		year: 2014,
-		text: "One Direction sortaient leur quatrième album Four il y a {n} 🌟",
-	},
-	{
-		month: 11,
-		day: 13,
-		year: 2015,
-		text: "One Direction sortaient leur cinquième album Made in the A.M. il y a {n} 🌟",
-	},
-	{
-		month: 9,
-		day: 20,
-		year: 2012,
-		text: "One Direction sortaient leur EP iTunes Festival: London 2012 il y a {n} 🌟",
-	},
-	{
-		month: 9,
-		day: 28,
-		year: 2012,
-		text: "One Direction sortaient leur EP Live While We're Young il y a {n} 🌟",
-	},
-	// Niall Horan
-	{
-		month: 10,
-		day: 20,
-		year: 2017,
-		text: "Niall Horan sortait son premier album Flicker il y a {n} 🌟",
-	},
-	{
-		month: 3,
-		day: 13,
-		year: 2020,
-		text: "Niall Horan sortait son deuxième album Heartbreak Weather il y a {n} 🌟",
-	},
-	{
-		month: 6,
-		day: 9,
-		year: 2023,
-		text: "Niall Horan sortait son troisième album The Show il y a {n} 🌟",
-	},
-	{
-		month: 6,
-		day: 5,
-		year: 2026,
-		text: "Niall Horan sort son quatrième album Dinner Party aujourd'hui 🎉",
-	},
-	{
-		month: 4,
-		day: 21,
-		year: 2018,
-		text: "Niall Horan sortait son premier EP Mirrors il y a {n} 🌟",
-	},
-	// Louis Tomlinson
-	{
-		month: 1,
-		day: 31,
-		year: 2020,
-		text: "Louis Tomlinson sortait son premier album Walls il y a {n} 🌟",
-	},
-	{
-		month: 11,
-		day: 11,
-		year: 2022,
-		text: "Louis Tomlinson sortait son deuxième album Faith in the Future il y a {n} 🌟",
-	},
-	{
-		month: 1,
-		day: 23,
-		year: 2026,
-		text: "Louis Tomlinson sortait son troisième album How Did I Get Here? il y a {n} 🌟",
-	},
-	// Harry Styles
-	{
-		month: 5,
-		day: 12,
-		year: 2017,
-		text: "Harry Styles sortait son premier album il y a {n} 🌟",
-	},
-	{
-		month: 12,
-		day: 13,
-		year: 2019,
-		text: "Harry Styles sortait son deuxième album Fine Line il y a {n} 🌟",
-	},
-	{
-		month: 5,
-		day: 20,
-		year: 2022,
-		text: "Harry Styles sortait son troisième album Harry's House il y a {n} 🌟",
-	},
-	{
-		month: 3,
-		day: 6,
-		year: 2026,
-		text: "Harry Styles sortait son quatrième album Kiss All the Time. Disco, Occasionally. il y a {n} 🌟",
-	},
-	// Zayn
-	{
-		month: 3,
-		day: 25,
-		year: 2016,
-		text: "Zayn sortait son premier album Mind of Mine il y a {n} 🌟",
-	},
-	{
-		month: 12,
-		day: 14,
-		year: 2018,
-		text: "Zayn sortait son deuxième album Icarus Falls il y a {n} 🌟",
-	},
-	{
-		month: 1,
-		day: 15,
-		year: 2021,
-		text: "Zayn sortait son troisième album Nobody Is Listening il y a {n} 🌟",
-	},
-	{
-		month: 5,
-		day: 17,
-		year: 2024,
-		text: "Zayn sortait son quatrième album Room Under the Stairs il y a {n} 🌟",
-	},
-	{
-		month: 4,
-		day: 17,
-		year: 2026,
-		text: "Zayn sortait son cinquième album Konnakol il y a {n} 🌟",
-	},
-	// Liam Payne
-	{
-		month: 12,
-		day: 6,
-		year: 2019,
-		text: "Liam Payne sortait son premier album LP1 il y a {n} 🌟",
-	},
-	{
-		month: 8,
-		day: 24,
-		year: 2018,
-		text: "Liam Payne sortait son premier EP First Time il y a {n} 🌟",
-	},
-	{
-		month: 10,
-		day: 9,
-		year: 2020,
-		text: "Liam Payne sortait son deuxième EP Midnight Hour il y a {n} 🌟",
-	},
-];
+let EventsOut = [];
+const CUSTOM_EVENTS_KEY = "custom_user_events";
+
+function getCustomEvents() {
+	try {
+		return JSON.parse(localStorage.getItem(CUSTOM_EVENTS_KEY)) || [];
+	} catch {
+		return [];
+	}
+}
+
+function saveCustomEvent(newEvent) {
+	try {
+		const current = getCustomEvents();
+		current.push(newEvent);
+		localStorage.setItem(CUSTOM_EVENTS_KEY, JSON.stringify(current));
+	} catch (e) {
+		console.warn("[storage] saveCustomEvent failed:", e);
+	}
+}
+
+async function loadAllEvents() {
+	try {
+		const response = await fetch("events.json");
+		const localJsonEvents = response.ok ? await response.json() : [];
+		EventsOut = [...localJsonEvents, ...getCustomEvents()];
+	} catch (error) {
+		console.error(
+			"[events] Impossible de charger events.json, repli sur le localStorage :",
+			error,
+		);
+		EventsOut = getCustomEvents();
+	}
+}
+
+function initEventModal() {
+	const modal = document.getElementById("event-modal");
+	const btnAdd = document.getElementById("add-event-btn");
+	const btnCancel = document.getElementById("event-cancel");
+	const btnConfirm = document.getElementById("event-confirm");
+
+	if (!modal || !btnAdd) return;
+
+	btnAdd.addEventListener("click", () => {
+		document.getElementById("event-text").value = "";
+		document.getElementById("event-day").value = new Date().getDate();
+		document.getElementById("event-month").value = new Date().getMonth() + 1;
+		document.getElementById("event-year").value = new Date().getFullYear();
+		modal.classList.remove("hidden");
+		document.getElementById("event-text").focus();
+	});
+
+	btnCancel.addEventListener("click", () => modal.classList.add("hidden"));
+
+	btnConfirm.addEventListener("click", () => {
+		const text = document.getElementById("event-text").value.trim();
+		const day = parseInt(document.getElementById("event-day").value);
+		const month = parseInt(document.getElementById("event-month").value);
+		const year = parseInt(document.getElementById("event-year").value);
+
+		if (!text || isNaN(day) || isNaN(month) || isNaN(year)) return;
+
+		const newEvent = { month, day, year, text };
+		saveCustomEvent(newEvent);
+		EventsOut.push(newEvent);
+
+		checkTsEvents();
+		renderCountdown();
+		modal.classList.add("hidden");
+	});
+
+	modal.addEventListener("click", (e) => {
+		if (e.target === modal) modal.classList.add("hidden");
+	});
+}
 
 // Mapping artiste → profils pour le filtre
 const artistProfileMap = {
@@ -1458,14 +1175,21 @@ function checkTsEvents() {
 		return;
 	}
 
-	if (matches.length === 1) {
-		const e = matches[0];
+	// Helper pour injecter proprement la mention "aujourd'hui" ou l'âge exact
+	function formatEventText(e) {
 		const n = year - e.year;
-		const text =
-			n === 0
-				? e.text.replace(" il y a {n}", " — c'est aujourd'hui ! 🎉")
-				: e.text.replace("{n}", `${n} an${n > 1 ? "s" : ""}`);
-		banner.innerHTML = `<span>${text}</span>`;
+		if (n === 0) {
+			return (
+				e.text.replace(/(il y a\s*)?\{n\}(\s*ans)?/g, "").trim() +
+				" — c'est aujourd'hui ! 🎉"
+			);
+		} else {
+			return e.text.replace("{n}", `${n}`);
+		}
+	}
+
+	if (matches.length === 1) {
+		banner.innerHTML = `<span>${formatEventText(matches[0])}</span>`;
 		banner.classList.remove("hidden");
 		return;
 	}
@@ -1475,11 +1199,7 @@ function checkTsEvents() {
 
 	function renderBannerSlide() {
 		const e = matches[currentIdx];
-		const n = year - e.year;
-		const text =
-			n === 0
-				? e.text.replace(" il y a {n}", " — c'est aujourd'hui ! 🎉")
-				: e.text.replace("{n}", `${n} an${n > 1 ? "s" : ""}`);
+		const text = formatEventText(e);
 		const dots = matches
 			.map(
 				(_, i) =>
@@ -1905,7 +1625,7 @@ function getNextUpcomingEvent() {
 			const n = cy - found.year;
 			return {
 				daysLeft: d,
-				text: found.text.replace("{n}", `${n} an${n > 1 ? "s" : ""}`),
+				text: found.text.replace("{n}", `${n}`),
 				date: checkDate,
 			};
 		}
@@ -2264,7 +1984,7 @@ function initSearchHistory() {
 }
 
 // --- Init ---
-window.onload = () => {
+window.onload = async () => {
 	initUserSelector();
 	initShortcutModal();
 	initConfigModal();
@@ -2272,6 +1992,10 @@ window.onload = () => {
 	initContextMenu();
 	initEditShortcutModal();
 	initFolderModal();
+	initEventModal();
+
+	// Attente indispensable du chargement des événements
+	await loadAllEvents();
 
 	const savedUser = localStorage.getItem("currentUser");
 	if (savedUser && profiles[savedUser]) {
