@@ -283,6 +283,23 @@ const artists = [
 let currentUser = null;
 let eventsData = []; // chargé depuis events.json, immuable
 let bannerInterval = null; // remplace window._bannerInterval
+let _checkTsEventsToken = 0; // token incrémenté à chaque appel pour annuler les appels périmés
+
+// ---------------------------------------------------------------------------
+// URL HELPERS
+// ---------------------------------------------------------------------------
+
+/**
+ * Extrait le hostname d'une URL sans crasher sur les URLs malformées.
+ * Retourne une chaîne vide si l'URL est invalide.
+ */
+function safeHostname(url) {
+	try {
+		return new URL(url).hostname;
+	} catch {
+		return "";
+	}
+}
 
 // ---------------------------------------------------------------------------
 // LOCALSTORAGE HELPERS
@@ -535,6 +552,7 @@ function transformArtistGroupToFlat(artistGroup) {
 			day: release.release_date.day,
 			year: release.release_date.year,
 			text,
+			artistName, // stocké directement pour éviter une recherche textuelle fragile dans buildReleaseCard
 			profiles: artistProfiles,
 		});
 	}
@@ -542,7 +560,57 @@ function transformArtistGroupToFlat(artistGroup) {
 	return flatEvents;
 }
 
+// ---------------------------------------------------------------------------
+// EVENTS — merge groupé (source unique de vérité pour loadAllEvents ET export)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fusionne un tableau d'artistes "base" avec un tableau "custom".
+ * Les deux ont la forme : [{ artist, profiles, discography }]
+ * Retourne un nouveau tableau sans mutation des entrées d'origine.
+ * La déduplication compare name + type + label + release_date.
+ */
+function mergeGroupedEvents(base, custom) {
+	const artistMap = new Map();
+
+	for (const a of base) {
+		artistMap.set(a.artist, {
+			artist: a.artist,
+			profiles: a.profiles,
+			discography: [...a.discography],
+		});
+	}
+
+	for (const a of custom) {
+		if (artistMap.has(a.artist)) {
+			const existing = artistMap.get(a.artist);
+			for (const rel of a.discography) {
+				const duplicate = existing.discography.some(
+					(r) =>
+						r.name === rel.name &&
+						r.type === rel.type &&
+						r.release_date.year === rel.release_date.year &&
+						r.release_date.month === rel.release_date.month &&
+						r.release_date.day === rel.release_date.day,
+				);
+				if (!duplicate) existing.discography.push(rel);
+			}
+		} else {
+			artistMap.set(a.artist, {
+				artist: a.artist,
+				profiles: a.profiles,
+				discography: [...a.discography],
+			});
+		}
+	}
+
+	return [...artistMap.values()];
+}
+
 async function loadAllEvents() {
+	// Invalider le cache de la liste d'artistes : les customEvents ont pu changer
+	_cachedEventArtists = null;
+
 	try {
 		// 1. Fetch events.json (structure groupée)
 		const res = await fetch("events.json");
@@ -558,42 +626,10 @@ async function loadAllEvents() {
 			console.warn("[events] Impossible de lire customEvents :", e);
 		}
 
-		// 3. Fusionner les deux sources en regroupant par artiste
-		//    pour que le rang soit calculé sur la discographie complète
-		const artistMap = new Map();
-		for (const a of grouped) {
-			artistMap.set(a.artist, {
-				artist: a.artist,
-				profiles: a.profiles,
-				discography: [...a.discography],
-			});
-		}
-		for (const a of customGrouped) {
-			if (artistMap.has(a.artist)) {
-				// Fusionner la discographie custom dans l'entrée existante
-				const existing = artistMap.get(a.artist);
-				for (const rel of a.discography) {
-					const duplicate = existing.discography.some(
-						(r) =>
-							r.name === rel.name &&
-							r.type === rel.type &&
-							r.release_date.year === rel.release_date.year &&
-							r.release_date.month === rel.release_date.month &&
-							r.release_date.day === rel.release_date.day,
-					);
-					if (!duplicate) existing.discography.push(rel);
-				}
-			} else {
-				artistMap.set(a.artist, {
-					artist: a.artist,
-					profiles: a.profiles,
-					discography: [...a.discography],
-				});
-			}
-		}
-
-		// 4. Transformer chaque entrée groupée en événements plats
-		eventsData = [...artistMap.values()].flatMap(transformArtistGroupToFlat);
+		// 3. Fusionner via le helper partagé et transformer en événements plats
+		eventsData = mergeGroupedEvents(grouped, customGrouped).flatMap(
+			transformArtistGroupToFlat,
+		);
 	} catch (err) {
 		console.error("[events] Impossible de charger events.json :", err);
 		eventsData = [];
@@ -713,8 +749,8 @@ async function buildReleaseCard(event) {
 	const year = new Date().getFullYear();
 	const text = formatEventText(event, year);
 
-	const artistObj = artists.find((a) => event.text.includes(a.name));
-	const artistName = artistObj?.name || "";
+	// artistName est stocké directement dans le flat event (plus de recherche textuelle fragile)
+	const artistName = event.artistName || "";
 	const albumName = extractAlbumQuery(event);
 	const meta =
 		artistName || albumName
@@ -745,6 +781,10 @@ async function buildReleaseCard(event) {
 }
 
 async function checkTsEvents() {
+	// Chaque appel obtient un token unique ; si le token a changé avant qu'on touche au DOM,
+	// c'est qu'un appel plus récent a pris la main — on abandonne silencieusement.
+	const token = ++_checkTsEventsToken;
+
 	const now = new Date();
 	const day = now.getDate();
 	const month = now.getMonth() + 1;
@@ -783,6 +823,12 @@ async function checkTsEvents() {
 	// Si sortie exacte aujourd'hui → carte rich media
 	if (todayReleases.length > 0) {
 		const cards = await Promise.all(todayReleases.map(buildReleaseCard));
+
+		// Vérifier que cet appel est toujours valide après l'await
+		if (token !== _checkTsEventsToken) return;
+
+		clearInterval(bannerInterval); // Fix #3 : nettoyer l'interval même dans ce chemin
+		bannerInterval = null;
 		banner.innerHTML = "";
 		banner.classList.add("has-release");
 
@@ -823,19 +869,26 @@ async function checkTsEvents() {
 		return;
 	}
 
+	// Pas de sortie exacte aujourd'hui → bandeau texte classique
+	// Vérification du token avant toute mutation DOM (pas d'await depuis ici)
+	if (token !== _checkTsEventsToken) return;
+
 	banner.classList.remove("has-release");
 
-	// Pas de sortie exacte aujourd'hui → bandeau texte classique
 	const slides = [
 		...todayAnnis.map((e) => ({ text: formatEventText(e, year) })),
 	];
 
 	if (slides.length === 0) {
+		clearInterval(bannerInterval);
+		bannerInterval = null;
 		banner.classList.add("hidden");
 		return;
 	}
 
 	if (slides.length === 1) {
+		clearInterval(bannerInterval);
+		bannerInterval = null;
 		banner.innerHTML = `<span>${slides[0].text}</span>`;
 		banner.classList.remove("hidden");
 		return;
@@ -1190,7 +1243,17 @@ function renderShortcuts(user) {
 		if (s.type === "folder") {
 			el = createFolderItem(s, i, user);
 		} else {
-			const icon = `https://www.google.com/s2/favicons?sz=64&domain=${new URL(s.url).hostname}`;
+			const hostname = safeHostname(s.url);
+			if (!hostname) {
+				// URL malformée : on l'affiche quand même mais sans favicon
+				console.warn(
+					"[renderShortcuts] URL invalide ignorée pour le favicon :",
+					s.url,
+				);
+			}
+			const icon = hostname
+				? `https://www.google.com/s2/favicons?sz=64&domain=${hostname}`
+				: "";
 			el = document.createElement("a");
 			el.className = "shortcut-item";
 			el.href = s.url;
@@ -1291,7 +1354,10 @@ function toggleFolderPopup(folder, index, anchorEl, user) {
 	popup.appendChild(header);
 
 	(folder.links || []).forEach((link, li) => {
-		const icon = `https://www.google.com/s2/favicons?sz=64&domain=${new URL(link.url).hostname}`;
+		const hostname = safeHostname(link.url);
+		const icon = hostname
+			? `https://www.google.com/s2/favicons?sz=64&domain=${hostname}`
+			: "";
 		const row = document.createElement("a");
 		row.className = "folder-popup-link";
 		row.href = link.url;
@@ -1373,6 +1439,12 @@ function showFolderContextMenu(x, y, index, user) {
 	menu.classList.remove("hidden");
 	menu.style.left = `${x}px`;
 	menu.style.top = `${y}px`;
+	requestAnimationFrame(() => {
+		const rect = menu.getBoundingClientRect();
+		if (rect.right > window.innerWidth) menu.style.left = `${x - rect.width}px`;
+		if (rect.bottom > window.innerHeight)
+			menu.style.top = `${y - rect.height}px`;
+	});
 }
 
 function closeContextMenu() {
@@ -1735,35 +1807,9 @@ async function exportEventsJson() {
 		console.warn("[export] Could not parse customEvents:", e);
 	}
 
-	// 3. Merge: deep-copy base, then fold in custom releases
-	const merged = base.map((a) => ({
-		...a,
-		discography: [...a.discography],
-	}));
-
-	for (const customArtist of custom) {
-		const existing = merged.find((a) => a.artist === customArtist.artist);
-		if (existing) {
-			// Push releases not already present (match by name + type + label + date)
-			for (const rel of customArtist.discography) {
-				const alreadyThere = existing.discography.some(
-					(r) =>
-						r.name === rel.name &&
-						r.type === rel.type &&
-						r.label === rel.label &&
-						r.release_date.year === rel.release_date.year &&
-						r.release_date.month === rel.release_date.month &&
-						r.release_date.day === rel.release_date.day,
-				);
-				if (!alreadyThere) existing.discography.push(rel);
-			}
-		} else {
-			merged.push({
-				...customArtist,
-				discography: [...customArtist.discography],
-			});
-		}
-	}
+	// 3. Merge via le helper partagé (même logique que loadAllEvents)
+	//    Note : l'export utilise une déduplication étendue (label inclus) pour être plus strict
+	const merged = mergeGroupedEvents(base, custom);
 
 	// 4. Trigger download
 	const blob = new Blob([JSON.stringify(merged, null, 4)], {
@@ -2736,25 +2782,22 @@ function initAddEventModal() {
 
 		const profilesWrap = document.createElement("div");
 		profilesWrap.className = "event-form-sub-panel-profiles";
-		const cbCarotte = document.createElement("input");
-		cbCarotte.type = "checkbox";
-		cbCarotte.id = "new-artist-carotte";
-		cbCarotte.checked = true;
-		const lblCarotte = document.createElement("label");
-		lblCarotte.htmlFor = "new-artist-carotte";
-		lblCarotte.appendChild(cbCarotte);
-		lblCarotte.appendChild(document.createTextNode(" Carotte"));
 
-		const cbAlex = document.createElement("input");
-		cbAlex.type = "checkbox";
-		cbAlex.id = "new-artist-alex";
-		cbAlex.checked = true;
-		const lblAlex = document.createElement("label");
-		lblAlex.htmlFor = "new-artist-alex";
-		lblAlex.appendChild(cbAlex);
-		lblAlex.appendChild(document.createTextNode(" Alex"));
+		// Génération dynamique depuis la liste des profils — plus de noms en dur
+		const profileCheckboxes = {};
+		Object.keys(profiles).forEach((profileName) => {
+			const cb = document.createElement("input");
+			cb.type = "checkbox";
+			cb.id = `new-artist-${profileName.toLowerCase()}`;
+			cb.checked = true;
+			const lbl = document.createElement("label");
+			lbl.htmlFor = cb.id;
+			lbl.appendChild(cb);
+			lbl.appendChild(document.createTextNode(` ${profileName}`));
+			profilesWrap.appendChild(lbl);
+			profileCheckboxes[profileName] = cb;
+		});
 
-		profilesWrap.append(lblCarotte, lblAlex);
 		subPanel.appendChild(profilesWrap);
 
 		const addArtistBtn = document.createElement("button");
@@ -2764,9 +2807,9 @@ function initAddEventModal() {
 		addArtistBtn.addEventListener("click", () => {
 			const name = subPanelInput.value.trim();
 			if (!name) return;
-			const profs = [];
-			if (cbCarotte.checked) profs.push("Carotte");
-			if (cbAlex.checked) profs.push("Alex");
+			const profs = Object.keys(profileCheckboxes).filter(
+				(p) => profileCheckboxes[p].checked,
+			);
 
 			// Save to localStorage.customArtists
 			let customArtists = [];
@@ -3008,7 +3051,16 @@ function initAddEventModal() {
 				}
 				valid = false;
 			}
-			if (!selectedMonth || isNaN(dayVal) || dayVal < 1 || dayVal > 31) {
+			if (!selectedMonth) {
+				// Mettre en erreur le trigger du dropdown mois
+				const trigger = document.querySelector(".event-form-month-trigger");
+				if (trigger) {
+					trigger.classList.add("error");
+					setTimeout(() => trigger.classList.remove("error"), 1500);
+				}
+				valid = false;
+			}
+			if (isNaN(dayVal) || dayVal < 1 || dayVal > 31) {
 				const el = document.getElementById("event-form-day");
 				if (el) {
 					el.classList.add("error");
@@ -3091,7 +3143,7 @@ window.onload = async () => {
 
 	setInterval(updateClock, 1000);
 	updateClock();
-	checkTsEvents();
+	// checkTsEvents() est appelé par loadProfile() — pas besoin de le rappeler ici
 	initArtistStores();
 	initSearchHistory();
 	initAddEventModal();
@@ -3102,6 +3154,8 @@ window.onload = async () => {
 			initUserSelector();
 			document.getElementById("user-selector").classList.remove("hidden");
 		});
-
-	document.getElementById("search-input").focus();
+	// focus() déjà appelé dans loadProfile() si un profil est chargé
+	if (!localStorage.getItem("currentUser")) {
+		document.getElementById("search-input").focus();
+	}
 };
