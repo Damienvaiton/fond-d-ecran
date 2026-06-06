@@ -126,6 +126,12 @@
 							</label>
 						</div>
 					</div>
+					<div class="config-section">
+						<label>Événements</label>
+						<div class="config-row">
+							<button id="export-events-btn">⬇ Exporter events.json</button>
+						</div>
+					</div>
 				</div>
 
 				<!-- Onglet Artistes -->
@@ -279,6 +285,7 @@
 		<button id="add-shortcut-btn" title="Ajouter un raccourci">+</button>
 		<button id="add-folder-btn" title="Créer un dossier">📁</button>
 		<button id="config-btn" title="Configuration">⚙</button>
+		<button id="add-event-btn" title="Ajouter un événement">🎵</button>
 
 		<!-- Modal Google Lens -->
 		<div id="lens-modal" class="modal hidden">
@@ -350,6 +357,19 @@
 
 		<!-- Menu stores artistes -->
 		<div id="artist-stores"></div>
+
+		<!-- Modal ajout événement -->
+		<div id="add-event-modal" class="modal hidden">
+			<div class="modal-content">
+				<h2>Ajouter un événement</h2>
+				<!-- form content built by JS -->
+				<div id="add-event-form"></div>
+				<div class="modal-actions">
+					<button id="add-event-cancel">Annuler</button>
+					<button id="add-event-confirm">Ajouter</button>
+				</div>
+			</div>
+		</div>
 
 		<script src="script.js"></script>
 	</body>

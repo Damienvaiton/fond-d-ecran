@@ -379,11 +379,162 @@ function getOrderedArtists() {
 // EVENTS — chargement depuis events.json uniquement
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// EVENTS — génération du texte (format plat)
+// ---------------------------------------------------------------------------
+
+function generateEventText(artistName, release, rankAlbum, rankEP) {
+	const ordinals = [
+		"premier",
+		"deuxième",
+		"troisième",
+		"quatrième",
+		"cinquième",
+		"sixième",
+		"septième",
+		"huitième",
+		"neuvième",
+		"dixième",
+	];
+	function ordinal(n) {
+		if (n <= 0) return String(n);
+		if (n <= ordinals.length) return ordinals[n - 1];
+		return `${n}ème`;
+	}
+
+	const isEP = release.type === "EP";
+	const rank = isEP ? rankEP : rankAlbum;
+	const typeLabel = isEP ? "EP" : "album";
+
+	if (release.label) {
+		// Avec label : "Taylor Swift sortait la Taylor's Version de Fearless il y a {n} ans 🎵"
+		return `${artistName} sortait la ${release.label} de ${release.name} il y a {n} ans 🎵`;
+	} else if (isEP) {
+		// EP sans label : "Gracie Abrams sortait son 2ème EP This Is What It Feels Like il y a {n} ans 🎵"
+		return `${artistName} sortait son ${ordinal(rank)} EP ${release.name} il y a {n} ans 🎵`;
+	} else {
+		// Album sans label : "Taylor Swift sortait son 3ème album Speak Now il y a {n} ans 🎵"
+		return `${artistName} sortait son ${ordinal(rank)} album ${release.name} il y a {n} ans 🎵`;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// EVENTS — transformation de la structure groupée vers le format plat
+// ---------------------------------------------------------------------------
+
+function transformArtistGroupToFlat(artistGroup) {
+	const {
+		artist: artistName,
+		profiles: artistProfiles,
+		discography,
+	} = artistGroup;
+
+	// Trier la discographie par date de sortie (chronologique) pour calculer les rangs
+	const sorted = [...discography].sort((a, b) => {
+		const da = new Date(
+			a.release_date.year,
+			a.release_date.month - 1,
+			a.release_date.day,
+		);
+		const db = new Date(
+			b.release_date.year,
+			b.release_date.month - 1,
+			b.release_date.day,
+		);
+		return da - db;
+	});
+
+	// Pré-calcul des rangs par type (albums sans label, EPs sans label) dans l'ordre chrono
+	// Les sorties avec label (Taylor's Version, etc.) ne comptent pas dans le rang
+	const flatEvents = [];
+
+	let albumRank = 0;
+	let epRank = 0;
+
+	// On parcourt dans l'ordre chronologique pour attribuer les rangs
+	const rankMap = new Map(); // clé = index dans sorted → { rankAlbum, rankEP }
+	for (const release of sorted) {
+		if (!release.label) {
+			if (release.type === "EP") {
+				epRank++;
+				rankMap.set(release, { rankAlbum: albumRank, rankEP: epRank });
+			} else {
+				albumRank++;
+				rankMap.set(release, { rankAlbum: albumRank, rankEP: epRank });
+			}
+		} else {
+			// Avec label : rang basé sur ce qui existe avant cette date dans le type correspondant
+			const releaseDate = new Date(
+				release.release_date.year,
+				release.release_date.month - 1,
+				release.release_date.day,
+			);
+			const rankAlbumAtDate = sorted.filter(
+				(r) =>
+					!r.label &&
+					r.type === "album" &&
+					new Date(
+						r.release_date.year,
+						r.release_date.month - 1,
+						r.release_date.day,
+					) < releaseDate,
+			).length;
+			const rankEPAtDate = sorted.filter(
+				(r) =>
+					!r.label &&
+					r.type === "EP" &&
+					new Date(
+						r.release_date.year,
+						r.release_date.month - 1,
+						r.release_date.day,
+					) < releaseDate,
+			).length;
+			rankMap.set(release, {
+				rankAlbum: rankAlbumAtDate,
+				rankEP: rankEPAtDate,
+			});
+		}
+	}
+
+	for (const release of discography) {
+		const { rankAlbum, rankEP } = rankMap.get(release) || {
+			rankAlbum: 0,
+			rankEP: 0,
+		};
+		const text = generateEventText(artistName, release, rankAlbum, rankEP);
+		flatEvents.push({
+			month: release.release_date.month,
+			day: release.release_date.day,
+			year: release.release_date.year,
+			text,
+			profiles: artistProfiles,
+		});
+	}
+
+	return flatEvents;
+}
+
 async function loadAllEvents() {
 	try {
+		// 1. Fetch events.json (structure groupée)
 		const res = await fetch("events.json");
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		eventsData = await res.json();
+		const grouped = await res.json();
+
+		// 2. Fetch customEvents depuis localStorage (même structure groupée)
+		let customGrouped = [];
+		try {
+			const raw = localStorage.getItem("customEvents");
+			if (raw) customGrouped = JSON.parse(raw);
+		} catch (e) {
+			console.warn("[events] Impossible de lire customEvents :", e);
+		}
+
+		// 3. Fusionner les deux sources
+		const allGrouped = [...grouped, ...customGrouped];
+
+		// 4. Transformer chaque entrée groupée en événements plats
+		eventsData = allGrouped.flatMap(transformArtistGroupToFlat);
 	} catch (err) {
 		console.error("[events] Impossible de charger events.json :", err);
 		eventsData = [];
@@ -396,14 +547,7 @@ async function loadAllEvents() {
 
 function isEventForProfile(event, user) {
 	if (!isEventsFiltered(user)) return true;
-	// L'event déclare explicitement ses profils
-	if (event.profiles && Array.isArray(event.profiles)) {
-		return event.profiles.includes(user);
-	}
-	// Sinon on cherche le nom de l'artiste dans le texte via la liste artists[]
-	const match = artists.find((a) => event.text.includes(a.name));
-	if (match && match.profiles) return match.profiles.includes(user);
-	return true; // événement sans artiste identifié → toujours affiché
+	return event.profiles && event.profiles.includes(user);
 }
 
 // ---------------------------------------------------------------------------
@@ -1497,6 +1641,77 @@ function initConfigModal() {
 	modal.addEventListener("click", (e) => {
 		if (e.target === modal) modal.classList.add("hidden");
 	});
+
+	document
+		.getElementById("export-events-btn")
+		.addEventListener("click", exportEventsJson);
+}
+
+// ---------------------------------------------------------------------------
+// EVENTS — export
+// ---------------------------------------------------------------------------
+
+async function exportEventsJson() {
+	// 1. Load base events.json
+	let base = [];
+	try {
+		const res = await fetch("events.json");
+		if (res.ok) base = await res.json();
+	} catch (e) {
+		console.warn("[export] Could not fetch events.json:", e);
+	}
+
+	// 2. Load customEvents from localStorage
+	let custom = [];
+	try {
+		const raw = localStorage.getItem("customEvents");
+		if (raw) custom = JSON.parse(raw);
+	} catch (e) {
+		console.warn("[export] Could not parse customEvents:", e);
+	}
+
+	// 3. Merge: deep-copy base, then fold in custom releases
+	const merged = base.map((a) => ({
+		...a,
+		discography: [...a.discography],
+	}));
+
+	for (const customArtist of custom) {
+		const existing = merged.find((a) => a.artist === customArtist.artist);
+		if (existing) {
+			// Push releases not already present (match by name + type + label + date)
+			for (const rel of customArtist.discography) {
+				const alreadyThere = existing.discography.some(
+					(r) =>
+						r.name === rel.name &&
+						r.type === rel.type &&
+						r.label === rel.label &&
+						r.release_date.year === rel.release_date.year &&
+						r.release_date.month === rel.release_date.month &&
+						r.release_date.day === rel.release_date.day,
+				);
+				if (!alreadyThere) existing.discography.push(rel);
+			}
+		} else {
+			merged.push({
+				...customArtist,
+				discography: [...customArtist.discography],
+			});
+		}
+	}
+
+	// 4. Trigger download
+	const blob = new Blob([JSON.stringify(merged, null, 4)], {
+		type: "application/json",
+	});
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = "events.json";
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
 }
 
 // ---------------------------------------------------------------------------
@@ -2082,6 +2297,464 @@ function initSearchHistory() {
 }
 
 // ---------------------------------------------------------------------------
+// ADD EVENT MODAL
+// ---------------------------------------------------------------------------
+
+// Cache for event JSON artists (fetched once)
+let _cachedEventArtists = null;
+
+async function getEventArtistList() {
+	if (_cachedEventArtists) return _cachedEventArtists;
+	let base = [];
+	try {
+		const res = await fetch("events.json");
+		if (res.ok) base = await res.json();
+	} catch {}
+
+	let custom = [];
+	try {
+		const raw = localStorage.getItem("customEvents");
+		if (raw) custom = JSON.parse(raw);
+	} catch {}
+
+	let extra = [];
+	try {
+		const raw = localStorage.getItem("customArtists");
+		if (raw) extra = JSON.parse(raw);
+	} catch {}
+
+	const all = new Map();
+	for (const a of [...base, ...custom]) all.set(a.artist, a.profiles || []);
+	for (const a of extra) {
+		if (!all.has(a.artist)) all.set(a.artist, a.profiles || []);
+	}
+
+	_cachedEventArtists = [...all.entries()]
+		.sort((a, b) => a[0].localeCompare(b[0]))
+		.map(([name, profiles]) => ({ name, profiles }));
+	return _cachedEventArtists;
+}
+
+function initAddEventModal() {
+	const modal = document.getElementById("add-event-modal");
+	const formEl = document.getElementById("add-event-form");
+
+	const FRENCH_MONTHS = [
+		"Janvier",
+		"Février",
+		"Mars",
+		"Avril",
+		"Mai",
+		"Juin",
+		"Juillet",
+		"Août",
+		"Septembre",
+		"Octobre",
+		"Novembre",
+		"Décembre",
+	];
+
+	let selectedArtist = null; // { name, profiles }
+	let selectedType = null; // "album" | "EP"
+	let selectedMonth = null; // 1–12
+
+	function buildForm(artistList) {
+		formEl.innerHTML = "";
+
+		// ── Artist dropdown ──
+		const artistField = document.createElement("div");
+		artistField.className = "event-form-field";
+		const artistLabel = document.createElement("label");
+		artistLabel.textContent = "Artiste";
+		artistField.appendChild(artistLabel);
+
+		const artistDdWrap = document.createElement("div");
+		artistDdWrap.className = "event-form-artist-dropdown";
+
+		const trigger = document.createElement("button");
+		trigger.className = "event-form-artist-trigger";
+		trigger.type = "button";
+		trigger.innerHTML = `<span class="trigger-text">Choisir un artiste…</span><span class="trigger-arrow">▾</span>`;
+
+		const list = document.createElement("div");
+		list.className = "event-form-artist-list";
+
+		for (const a of artistList) {
+			const opt = document.createElement("div");
+			opt.className = "event-form-artist-option";
+			opt.textContent = a.name;
+			opt.dataset.name = a.name;
+			opt.addEventListener("mousedown", (e) => {
+				e.preventDefault();
+				selectArtist(a);
+				artistDdWrap.classList.remove("open");
+			});
+			list.appendChild(opt);
+		}
+
+		// "＋ Nouvel artiste" option
+		const newOpt = document.createElement("div");
+		newOpt.className = "event-form-artist-option new-artist-opt";
+		newOpt.textContent = "＋ Nouvel artiste";
+		newOpt.addEventListener("mousedown", (e) => {
+			e.preventDefault();
+			artistDdWrap.classList.remove("open");
+			subPanel.classList.remove("hidden");
+			subPanelInput.focus();
+		});
+		list.appendChild(newOpt);
+
+		trigger.addEventListener("click", (e) => {
+			e.stopPropagation();
+			artistDdWrap.classList.toggle("open");
+		});
+
+		artistDdWrap.appendChild(trigger);
+		artistDdWrap.appendChild(list);
+		artistField.appendChild(artistDdWrap);
+
+		// Sub-panel for new artist
+		const subPanel = document.createElement("div");
+		subPanel.className = "event-form-sub-panel hidden";
+
+		const subPanelInput = document.createElement("input");
+		subPanelInput.type = "text";
+		subPanelInput.placeholder = "Nom de l'artiste";
+		subPanelInput.autocomplete = "off";
+		subPanelInput.spellcheck = false;
+		subPanel.appendChild(subPanelInput);
+
+		const profilesWrap = document.createElement("div");
+		profilesWrap.className = "event-form-sub-panel-profiles";
+		const cbCarotte = document.createElement("input");
+		cbCarotte.type = "checkbox";
+		cbCarotte.id = "new-artist-carotte";
+		cbCarotte.checked = true;
+		const lblCarotte = document.createElement("label");
+		lblCarotte.htmlFor = "new-artist-carotte";
+		lblCarotte.appendChild(cbCarotte);
+		lblCarotte.appendChild(document.createTextNode(" Carotte"));
+
+		const cbAlex = document.createElement("input");
+		cbAlex.type = "checkbox";
+		cbAlex.id = "new-artist-alex";
+		cbAlex.checked = true;
+		const lblAlex = document.createElement("label");
+		lblAlex.htmlFor = "new-artist-alex";
+		lblAlex.appendChild(cbAlex);
+		lblAlex.appendChild(document.createTextNode(" Alex"));
+
+		profilesWrap.append(lblCarotte, lblAlex);
+		subPanel.appendChild(profilesWrap);
+
+		const addArtistBtn = document.createElement("button");
+		addArtistBtn.type = "button";
+		addArtistBtn.className = "event-form-sub-panel-add";
+		addArtistBtn.textContent = "Ajouter";
+		addArtistBtn.addEventListener("click", () => {
+			const name = subPanelInput.value.trim();
+			if (!name) return;
+			const profs = [];
+			if (cbCarotte.checked) profs.push("Carotte");
+			if (cbAlex.checked) profs.push("Alex");
+
+			// Save to localStorage.customArtists
+			let customArtists = [];
+			try {
+				customArtists = JSON.parse(
+					localStorage.getItem("customArtists") || "[]",
+				);
+			} catch {}
+			if (!customArtists.find((a) => a.artist === name)) {
+				customArtists.push({ artist: name, profiles: profs });
+				localStorage.setItem("customArtists", JSON.stringify(customArtists));
+			}
+
+			// Reset cache so the new artist appears next time
+			_cachedEventArtists = null;
+
+			// Select the new artist
+			const newArtist = { name, profiles: profs };
+
+			// Add to current dropdown list (re-insert alphabetically)
+			const existing = list.querySelector(`[data-name="${name}"]`);
+			if (!existing) {
+				const opt = document.createElement("div");
+				opt.className = "event-form-artist-option";
+				opt.textContent = name;
+				opt.dataset.name = name;
+				opt.addEventListener("mousedown", (ev) => {
+					ev.preventDefault();
+					selectArtist(newArtist);
+					artistDdWrap.classList.remove("open");
+				});
+				// Insert alphabetically before newOpt
+				list.insertBefore(opt, newOpt);
+			}
+
+			selectArtist(newArtist);
+			subPanel.classList.add("hidden");
+			subPanelInput.value = "";
+		});
+		subPanel.appendChild(addArtistBtn);
+		artistField.appendChild(subPanel);
+		formEl.appendChild(artistField);
+
+		// ── Type toggle ──
+		const typeField = document.createElement("div");
+		typeField.className = "event-form-field";
+		const typeLabel = document.createElement("label");
+		typeLabel.textContent = "Type";
+		typeField.appendChild(typeLabel);
+
+		const typeToggle = document.createElement("div");
+		typeToggle.className = "event-form-type-toggle";
+
+		for (const t of ["album", "EP", "Single"]) {
+			const btn = document.createElement("button");
+			btn.type = "button";
+			btn.className = "event-form-type-btn";
+			btn.textContent = t === "album" ? "Album" : t;
+			btn.dataset.type = t;
+			if (t === "Single") btn.disabled = true;
+			btn.addEventListener("click", () => {
+				typeToggle
+					.querySelectorAll(".event-form-type-btn")
+					.forEach((b) => b.classList.remove("active"));
+				btn.classList.add("active");
+				selectedType = t;
+			});
+			typeToggle.appendChild(btn);
+		}
+		typeField.appendChild(typeToggle);
+		formEl.appendChild(typeField);
+
+		// ── Release name ──
+		const nameField = document.createElement("div");
+		nameField.className = "event-form-field";
+		const nameLbl = document.createElement("label");
+		nameLbl.textContent = "Titre";
+		nameField.appendChild(nameLbl);
+		const nameInput = document.createElement("input");
+		nameInput.type = "text";
+		nameInput.id = "event-form-name";
+		nameInput.className = "event-form-input";
+		nameInput.placeholder = "Nom de la sortie";
+		nameInput.autocomplete = "off";
+		nameInput.spellcheck = false;
+		nameField.appendChild(nameInput);
+		formEl.appendChild(nameField);
+
+		// ── Label (optional) ──
+		const labelField = document.createElement("div");
+		labelField.className = "event-form-field";
+		const labelLbl = document.createElement("label");
+		labelLbl.textContent = "Label (optionnel)";
+		labelField.appendChild(labelLbl);
+		const labelInput = document.createElement("input");
+		labelInput.type = "text";
+		labelInput.id = "event-form-label";
+		labelInput.className = "event-form-input";
+		labelInput.placeholder = "ex: Taylor's Version, Deluxe…";
+		labelInput.autocomplete = "off";
+		labelInput.spellcheck = false;
+		labelField.appendChild(labelInput);
+		formEl.appendChild(labelField);
+
+		// ── Date ──
+		const dateField = document.createElement("div");
+		dateField.className = "event-form-field";
+		const dateLbl = document.createElement("label");
+		dateLbl.textContent = "Date de sortie";
+		dateField.appendChild(dateLbl);
+
+		const dateRow = document.createElement("div");
+		dateRow.className = "event-form-date-row";
+
+		const dayInput = document.createElement("input");
+		dayInput.type = "number";
+		dayInput.id = "event-form-day";
+		dayInput.className = "event-form-day";
+		dayInput.min = 1;
+		dayInput.max = 31;
+		dayInput.placeholder = "JJ";
+
+		// Month custom dropdown
+		const monthWrap = document.createElement("div");
+		monthWrap.className = "event-form-month-wrap";
+
+		const monthTrigger = document.createElement("button");
+		monthTrigger.type = "button";
+		monthTrigger.className = "event-form-month-trigger";
+		monthTrigger.innerHTML = `<span class="month-text">Mois</span><span class="trigger-arrow">▾</span>`;
+
+		const monthList = document.createElement("div");
+		monthList.className = "event-form-month-list";
+
+		FRENCH_MONTHS.forEach((m, i) => {
+			const opt = document.createElement("div");
+			opt.className = "event-form-month-option";
+			opt.textContent = m;
+			opt.dataset.value = String(i + 1);
+			opt.addEventListener("mousedown", (e) => {
+				e.preventDefault();
+				selectedMonth = i + 1;
+				monthTrigger.querySelector(".month-text").textContent = m;
+				monthList
+					.querySelectorAll(".event-form-month-option")
+					.forEach((o) => o.classList.remove("selected"));
+				opt.classList.add("selected");
+				monthWrap.classList.remove("open");
+			});
+			monthList.appendChild(opt);
+		});
+
+		monthTrigger.addEventListener("click", (e) => {
+			e.stopPropagation();
+			monthWrap.classList.toggle("open");
+		});
+
+		monthWrap.appendChild(monthTrigger);
+		monthWrap.appendChild(monthList);
+
+		const yearInput = document.createElement("input");
+		yearInput.type = "number";
+		yearInput.id = "event-form-year";
+		yearInput.className = "event-form-year";
+		yearInput.min = 1950;
+		yearInput.max = 2099;
+		yearInput.placeholder = "AAAA";
+
+		dateRow.append(dayInput, monthWrap, yearInput);
+		dateField.appendChild(dateRow);
+		formEl.appendChild(dateField);
+
+		// Close dropdowns on outside click (within modal)
+		modal.addEventListener("click", () => {
+			artistDdWrap.classList.remove("open");
+			monthWrap.classList.remove("open");
+		});
+
+		function selectArtist(a) {
+			selectedArtist = a;
+			trigger.querySelector(".trigger-text").textContent = a.name;
+			list.querySelectorAll(".event-form-artist-option").forEach((o) => {
+				o.classList.toggle("selected", o.dataset.name === a.name);
+			});
+		}
+	}
+
+	// Open modal
+	document
+		.getElementById("add-event-btn")
+		.addEventListener("click", async () => {
+			// Reset state
+			selectedArtist = null;
+			selectedType = null;
+			selectedMonth = null;
+
+			const artistList = await getEventArtistList();
+			buildForm(artistList);
+
+			modal.classList.remove("hidden");
+		});
+
+	// Cancel
+	document.getElementById("add-event-cancel").addEventListener("click", () => {
+		modal.classList.add("hidden");
+	});
+	modal.addEventListener("click", (e) => {
+		if (e.target === modal) modal.classList.add("hidden");
+	});
+
+	// Confirm
+	document
+		.getElementById("add-event-confirm")
+		.addEventListener("click", async () => {
+			// Gather values
+			const nameVal = document.getElementById("event-form-name")?.value.trim();
+			const labelVal =
+				document.getElementById("event-form-label")?.value.trim() || null;
+			const dayVal = parseInt(document.getElementById("event-form-day")?.value);
+			const yearVal = parseInt(
+				document.getElementById("event-form-year")?.value,
+			);
+
+			// Validate
+			let valid = true;
+
+			if (!selectedArtist) {
+				valid = false;
+			}
+			if (!selectedType) {
+				valid = false;
+			}
+			if (!nameVal) {
+				const el = document.getElementById("event-form-name");
+				if (el) {
+					el.classList.add("error");
+					setTimeout(() => el.classList.remove("error"), 1500);
+				}
+				valid = false;
+			}
+			if (!selectedMonth || isNaN(dayVal) || dayVal < 1 || dayVal > 31) {
+				const el = document.getElementById("event-form-day");
+				if (el) {
+					el.classList.add("error");
+					setTimeout(() => el.classList.remove("error"), 1500);
+				}
+				valid = false;
+			}
+			if (isNaN(yearVal) || yearVal < 1950 || yearVal > 2099) {
+				const el = document.getElementById("event-form-year");
+				if (el) {
+					el.classList.add("error");
+					setTimeout(() => el.classList.remove("error"), 1500);
+				}
+				valid = false;
+			}
+			if (!valid) return;
+
+			// Build release object
+			const newRelease = {
+				name: nameVal,
+				type: selectedType,
+				label: labelVal || null,
+				release_date: { month: selectedMonth, day: dayVal, year: yearVal },
+			};
+
+			// Load & update customEvents
+			let customEvents = [];
+			try {
+				customEvents = JSON.parse(localStorage.getItem("customEvents") || "[]");
+			} catch {}
+
+			const existing = customEvents.find(
+				(a) => a.artist === selectedArtist.name,
+			);
+			if (existing) {
+				existing.discography.push(newRelease);
+			} else {
+				customEvents.push({
+					artist: selectedArtist.name,
+					profiles: selectedArtist.profiles,
+					discography: [newRelease],
+				});
+			}
+			localStorage.setItem("customEvents", JSON.stringify(customEvents));
+
+			// Reload events and refresh UI
+			await loadAllEvents();
+			checkTsEvents();
+			renderCountdown();
+
+			// Close & reset
+			modal.classList.add("hidden");
+			formEl.innerHTML = "";
+		});
+}
+
+// ---------------------------------------------------------------------------
 // INIT
 // ---------------------------------------------------------------------------
 
@@ -2110,6 +2783,7 @@ window.onload = async () => {
 	checkTsEvents();
 	initArtistStores();
 	initSearchHistory();
+	initAddEventModal();
 
 	document
 		.getElementById("switch-profile-btn")

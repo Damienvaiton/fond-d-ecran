@@ -1198,8 +1198,15 @@ html {
 }
 
 @keyframes ctxIn {
-    from { opacity: 0; transform: scale(0.94); }
-    to   { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .shortcut-context-menu button {
@@ -1502,7 +1509,7 @@ html {
     font-style: italic;
     font-weight: 300;
     letter-spacing: 0.02em;
-    text-shadow: 0 1px 8px rgba(0,0,0,0.4);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
     text-align: center;
     max-width: 520px;
     line-height: 1.5;
@@ -1526,10 +1533,12 @@ html {
 
 #event-countdown {
     position: fixed;
-    top: 248px; /* juste sous l'horloge (30px top + 200px clock + 18px gap) */
+    top: 248px;
+    /* juste sous l'horloge (30px top + 200px clock + 18px gap) */
     right: 30px;
     z-index: 10;
-    width: 200px; /* aligne avec la largeur de l'horloge */
+    width: 200px;
+    /* aligne avec la largeur de l'horloge */
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1543,7 +1552,7 @@ html {
     font-family: 'Share Tech Mono', monospace;
     font-size: 1.1rem;
     color: #e01010;
-    text-shadow: 0 0 6px #ff2020, 0 0 14px rgba(255,0,0,0.4);
+    text-shadow: 0 0 6px #ff2020, 0 0 14px rgba(255, 0, 0, 0.4);
     letter-spacing: 0.06em;
     margin-bottom: 8px;
 }
@@ -1675,4 +1684,473 @@ html {
 
 .search-history-clear-all:hover {
     color: rgba(255, 255, 255, 0.5);
+}
+
+/* =====================
+   ADD EVENT BUTTON
+   ===================== */
+
+#add-event-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 240px;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    padding: 0;
+    line-height: 1;
+    width: 42px;
+    height: 42px;
+    font-size: 1rem;
+}
+
+#add-event-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: scale(1.1);
+}
+
+/* =====================
+   EXPORT EVENTS BUTTON
+   ===================== */
+
+#export-events-btn {
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.85rem;
+    background: white;
+    color: #111;
+    white-space: nowrap;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+#export-events-btn:hover {
+    transform: scale(1.02);
+}
+
+/* =====================
+   ADD EVENT MODAL — FORM ELEMENTS
+   ===================== */
+
+/* Artist custom dropdown */
+.event-form-field {
+    text-align: left;
+    margin-bottom: 14px;
+}
+
+.event-form-field label {
+    display: block;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+}
+
+.event-form-artist-dropdown {
+    position: relative;
+}
+
+.event-form-artist-trigger {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 11px 16px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.2s, background 0.2s;
+    box-sizing: border-box;
+}
+
+.event-form-artist-trigger:hover,
+.event-form-artist-dropdown.open .event-form-artist-trigger {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.event-form-artist-trigger .trigger-arrow {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.3);
+    transition: transform 0.2s;
+}
+
+.event-form-artist-dropdown.open .trigger-arrow {
+    transform: rotate(180deg);
+}
+
+.event-form-artist-list {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: rgba(10, 10, 16, 0.97);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 6px;
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+    display: none;
+}
+
+.event-form-artist-dropdown.open .event-form-artist-list {
+    display: block;
+    animation: ctxIn 0.12s ease;
+}
+
+.event-form-artist-option {
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.event-form-artist-option:hover,
+.event-form-artist-option.selected {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+.event-form-artist-option.new-artist-opt {
+    color: rgba(255, 255, 255, 0.45);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin-top: 4px;
+    padding-top: 10px;
+    font-style: italic;
+}
+
+.event-form-artist-option.new-artist-opt:hover {
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Sub-panel for new artist creation */
+.event-form-sub-panel {
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 14px;
+    animation: subPanelIn 0.18s ease;
+    overflow: hidden;
+}
+
+@keyframes subPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+        max-height: 0;
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 200px;
+    }
+}
+
+.event-form-sub-panel input[type="text"] {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 9px 12px;
+    color: white;
+    font-size: 0.88rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+    margin-bottom: 10px;
+}
+
+.event-form-sub-panel input[type="text"]:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.event-form-sub-panel input[type="text"]::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.event-form-sub-panel-profiles {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.event-form-sub-panel-profiles label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+    margin-bottom: 0;
+}
+
+.event-form-sub-panel-profiles input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: white;
+    cursor: pointer;
+}
+
+.event-form-sub-panel-add {
+    padding: 7px 16px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.82rem;
+    background: white;
+    color: #111;
+    transition: transform 0.15s;
+}
+
+.event-form-sub-panel-add:hover {
+    transform: scale(1.04);
+}
+
+/* Type toggle (Album / EP / Single) */
+.event-form-type-toggle {
+    display: flex;
+    gap: 8px;
+}
+
+.event-form-type-btn {
+    flex: 1;
+    padding: 9px 0;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    letter-spacing: 0.03em;
+}
+
+.event-form-type-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.event-form-type-btn.active {
+    background: white;
+    color: #111;
+    border-color: white;
+}
+
+.event-form-type-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+/* Text inputs inside the event form */
+.event-form-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 11px 14px;
+    color: white;
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.event-form-input:focus {
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.event-form-input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.event-form-input.error {
+    border-color: rgba(255, 80, 80, 0.7);
+}
+
+/* Date row */
+.event-form-date-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.event-form-date-row input[type="number"] {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 11px 10px;
+    color: white;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    -moz-appearance: textfield;
+}
+
+.event-form-date-row input[type="number"]::-webkit-inner-spin-button,
+.event-form-date-row input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.event-form-date-row input[type="number"]:focus {
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.event-form-date-row input[type="number"]::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.event-form-date-row input[type="number"].error {
+    border-color: rgba(255, 80, 80, 0.7);
+}
+
+.event-form-day {
+    width: 72px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.event-form-year {
+    width: 90px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+/* Month custom dropdown */
+.event-form-month-wrap {
+    flex: 1;
+    position: relative;
+}
+
+.event-form-month-trigger {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 11px 12px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    height: 100%;
+}
+
+.event-form-month-trigger:hover,
+.event-form-month-wrap.open .event-form-month-trigger {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.event-form-month-trigger .trigger-arrow {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.3);
+    transition: transform 0.2s;
+}
+
+.event-form-month-wrap.open .trigger-arrow {
+    transform: rotate(180deg);
+}
+
+.event-form-month-list {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    background: rgba(10, 10, 16, 0.97);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 5px;
+    z-index: 200;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+    display: none;
+    animation: ctxIn 0.1s ease;
+}
+
+.event-form-month-wrap.open .event-form-month-list {
+    display: block;
+}
+
+.event-form-month-option {
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+}
+
+.event-form-month-option:hover,
+.event-form-month-option.selected {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+/* Modal content sizing for add-event modal */
+#add-event-modal .modal-content {
+    min-width: 360px;
+    max-width: 440px;
+    width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+    text-align: left;
+}
+
+#add-event-modal .modal-content h2 {
+    text-align: center;
+}
+
+#add-event-cancel {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+#add-event-confirm {
+    background: white;
+    color: #111;
 }
