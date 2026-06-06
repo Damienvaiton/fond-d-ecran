@@ -425,21 +425,67 @@ function formatEventText(event, currentYear) {
 	return event.text.replace(/\{n\}/g, String(n));
 }
 
-// Recherche iTunes : retourne { artwork, trackName, artistName, collectionName, trackViewUrl }
-async function fetchItunesMeta(query) {
+// ---------------------------------------------------------------------------
+// CACHE RELEASE
+// ---------------------------------------------------------------------------
+
+function getReleaseCache(query) {
+	const today = new Date().toISOString().slice(0, 10);
+	const key = `releaseCache_${today}_${query}`;
 	try {
-		const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=album&limit=1`;
+		const raw = localStorage.getItem(key);
+		return raw ? JSON.parse(raw) : null;
+	} catch {
+		return null;
+	}
+}
+
+function setReleaseCache(query, data) {
+	const today = new Date().toISOString().slice(0, 10);
+	const key = `releaseCache_${today}_${query}`;
+	// Nettoyage des caches des jours précédents
+	Object.keys(localStorage)
+		.filter(
+			(k) =>
+				k.startsWith("releaseCache_") &&
+				!k.startsWith(`releaseCache_${today}_`),
+		)
+		.forEach((k) => localStorage.removeItem(k));
+	try {
+		localStorage.setItem(key, JSON.stringify(data));
+	} catch {}
+}
+
+async function fetchSpotifyMeta(artistName, albumName) {
+	const query = `${artistName} ${albumName}`.trim();
+	const cached = getReleaseCache(query);
+	if (cached) return cached;
+
+	try {
+		// On cherche album + artiste explicitement
+		const searchTerm = encodeURIComponent(`${albumName} ${artistName}`);
+		const url = `https://itunes.apple.com/search?term=${searchTerm}&media=music&entity=album&limit=5`;
 		const res = await fetch(url);
 		if (!res.ok) return null;
 		const data = await res.json();
 		if (!data.results?.length) return null;
-		const r = data.results[0];
-		return {
-			artwork: r.artworkUrl100.replace("100x100bb", "400x400bb"),
-			artistName: r.artistName,
-			collectionName: r.collectionName,
-			collectionViewUrl: r.collectionViewUrl,
+
+		// On prend le premier résultat dont l'artiste correspond (insensible à la casse)
+		const match =
+			data.results.find(
+				(r) =>
+					r.artistName.toLowerCase().includes(artistName.toLowerCase()) ||
+					artistName.toLowerCase().includes(r.artistName.toLowerCase()),
+			) || data.results[0];
+
+		const result = {
+			artwork: match.artworkUrl100.replace("100x100bb", "300x300bb"),
+			artistName: match.artistName,
+			collectionName: match.collectionName,
+			spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(`${albumName} ${artistName}`)}/albums`,
 		};
+		setReleaseCache(query, result);
+		return result;
 	} catch {
 		return null;
 	}
@@ -447,18 +493,19 @@ async function fetchItunesMeta(query) {
 
 // Extrait le nom de l'album depuis le texte de l'event (entre guillemets ou après "album ")
 function extractAlbumQuery(event) {
-	// Cherche un nom entre guillemets typographiques ou droits
-	const quoted = event.text.match(/[«""]([^»""]+)[»""]/);
+	// Cherche entre guillemets typographiques ou droits
+	const quoted = event.text.match(/[«"""]([^»"""]+)[»"""]/);
 	if (quoted) return quoted[1];
-	// Sinon prend tout ce qui suit "album " jusqu'au prochain mot-clé ou emoji
-	const afterAlbum = event.text.match(
-		/album\s+([A-Za-zÀ-ÿ0-9\s':!\-\.]+?)(?:\s+il y a|\s+🎉|\s*$)/i,
-	);
+	// Cherche après "album " jusqu'à " il y a" ou emoji ou fin
+	const afterAlbum = event.text.match(/album\s+(.+?)\s+(?:il y a|🎉|\s*$)/i);
 	if (afterAlbum) return afterAlbum[1].trim();
+	// Cherche après "EP "
+	const afterEP = event.text.match(/EP\s+(.+?)\s+(?:il y a|🎉|\s*$)/i);
+	if (afterEP) return afterEP[1].trim();
 	return null;
 }
 
-// Construit la pill sobre pour un event "sortie aujourd'hui"
+// Construit la carte rich media pour une sortie aujourd'hui
 async function buildReleaseCard(event) {
 	const year = new Date().getFullYear();
 	const text = formatEventText(event, year);
@@ -466,28 +513,30 @@ async function buildReleaseCard(event) {
 	const artistObj = artists.find((a) => event.text.includes(a.name));
 	const artistName = artistObj?.name || "";
 	const albumName = extractAlbumQuery(event);
-	const query = albumName ? `${artistName} ${albumName}` : artistName;
-
-	const meta = query ? await fetchItunesMeta(query) : null;
+	const meta =
+		artistName || albumName
+			? await fetchSpotifyMeta(artistName, albumName || "")
+			: null;
 
 	const el = document.createElement("div");
-	el.className = "release-pill";
+	el.className = "release-today-card";
+
+	const spotifyIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.623.623 0 0 1-.857.207c-2.348-1.435-5.304-1.759-8.785-.964a.623.623 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 0 1 .207.857zm1.224-2.723a.78.78 0 0 1-1.072.257c-2.687-1.652-6.785-2.131-9.965-1.166a.78.78 0 0 1-.973-.519.781.781 0 0 1 .52-.973c3.632-1.102 8.147-.568 11.233 1.329a.78.78 0 0 1 .257 1.072zm.105-2.835C14.692 9.15 9.375 8.977 6.297 9.92a.937.937 0 1 1-.543-1.794c3.532-1.072 9.404-.865 13.115 1.338a.937.937 0 0 1-.954 1.402z"/></svg>`;
 
 	if (meta) {
 		el.innerHTML = `
-			<img class="release-pill-art" src="${meta.artwork}" alt="">
-			<span class="release-pill-text">
-				<span class="release-pill-name">${meta.collectionName}</span>
-				<span class="release-pill-artist">${meta.artistName}</span>
-			</span>
-			<a class="release-pill-btn" href="${meta.collectionViewUrl}" target="_blank" title="Apple Music">
-				<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
-					<path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm-1 10V5l5 3-5 3z"/>
-				</svg>
+			<img class="release-today-art" src="${meta.artwork}" alt="">
+			<div class="release-today-body">
+				<span class="release-today-badge">Sortie aujourd'hui</span>
+				<span class="release-today-album">${meta.collectionName}</span>
+				<span class="release-today-artist">${meta.artistName}</span>
+			</div>
+			<a class="release-today-spotify" href="${meta.spotifyUrl}" target="_blank" title="Écouter sur Spotify">
+				${spotifyIcon}
 			</a>
 		`;
 	} else {
-		el.innerHTML = `<span class="release-pill-fallback">${text}</span>`;
+		el.innerHTML = `<span class="release-today-fallback">${text}</span>`;
 	}
 	return el;
 }
@@ -528,43 +577,50 @@ async function checkTsEvents() {
 		text: ev.text,
 	}));
 
-	// Si sortie exacte aujourd'hui → carte rich media (remplace tout le bandeau)
+	// Si sortie exacte aujourd'hui → carte rich media
 	if (todayReleases.length > 0) {
-		// Construit les pills en parallèle
-		const pills = await Promise.all(todayReleases.map(buildReleaseCard));
+		const cards = await Promise.all(todayReleases.map(buildReleaseCard));
 		banner.innerHTML = "";
-		if (pills.length === 1) {
-			banner.appendChild(pills[0]);
+		banner.classList.add("has-release");
+
+		if (cards.length === 1) {
+			banner.appendChild(cards[0]);
 		} else {
 			let idx = 0;
+			const wrapper = document.createElement("div");
+			wrapper.className = "release-multi-wrapper";
+
 			const prev = document.createElement("button");
-			prev.className = "banner-nav banner-prev";
+			prev.className = "release-multi-nav";
 			prev.textContent = "‹";
 			const next = document.createElement("button");
-			next.className = "banner-nav banner-next";
+			next.className = "release-multi-nav";
 			next.textContent = "›";
 			const slot = document.createElement("div");
-			slot.className = "release-pill-slot";
-			slot.appendChild(pills[0]);
+			slot.appendChild(cards[0]);
+
 			function show(i) {
 				slot.innerHTML = "";
-				slot.appendChild(pills[i]);
+				slot.appendChild(cards[i]);
 			}
 			prev.addEventListener("click", (e) => {
 				e.stopPropagation();
-				idx = (idx - 1 + pills.length) % pills.length;
+				idx = (idx - 1 + cards.length) % cards.length;
 				show(idx);
 			});
 			next.addEventListener("click", (e) => {
 				e.stopPropagation();
-				idx = (idx + 1) % pills.length;
+				idx = (idx + 1) % cards.length;
 				show(idx);
 			});
-			banner.append(prev, slot, next);
+			wrapper.append(prev, slot, next);
+			banner.appendChild(wrapper);
 		}
 		banner.classList.remove("hidden");
 		return;
 	}
+
+	banner.classList.remove("has-release");
 
 	// Pas de sortie exacte aujourd'hui → bandeau texte classique
 	const slides = [

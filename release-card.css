@@ -1,56 +1,265 @@
 /* =====================
-   RELEASE PILL — sortie du jour
+   RELEASE CARD — sortie du jour
+   Remplace le bandeau bas quand c'est une sortie exacte aujourd'hui
    ===================== */
 
+/* Le bandeau normal reste intact pour les anniversaires/texte */
+/* Quand c'est une sortie aujourd'hui, on injecte .release-today-card
+   directement dans #ts-event-banner qui prend un style différent */
+
+#ts-event-banner.has-release {
+	background: transparent;
+	border: none;
+	backdrop-filter: none;
+	padding: 0;
+	height: auto;
+	max-height: none;
+	overflow: visible;
+	bottom: 90px;
+}
+
+/* Carte principale */
+.release-today-card {
+	display: flex;
+	align-items: stretch;
+	gap: 0;
+	border-radius: 18px;
+	overflow: hidden;
+	background: rgba(8, 8, 12, 0.82);
+	backdrop-filter: blur(40px);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow:
+		0 24px 60px rgba(0, 0, 0, 0.55),
+		0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+	animation: releaseCardIn 0.5s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+	opacity: 0;
+	min-width: 320px;
+	max-width: 400px;
+	position: relative;
+}
+
+@keyframes releaseCardIn {
+	from {
+		opacity: 0;
+		transform: translateY(12px) scale(0.96);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+/* Artwork à gauche */
+.release-today-art {
+	width: 80px;
+	height: 80px;
+	object-fit: cover;
+	flex-shrink: 0;
+	display: block;
+}
+
+/* Contenu texte */
+.release-today-body {
+	flex: 1;
+	padding: 12px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 4px;
+	min-width: 0;
+}
+
+/* Badge "Sortie aujourd'hui" */
+.release-today-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 0.6rem;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.4);
+	margin-bottom: 2px;
+}
+
+.release-today-badge::before {
+	content: "";
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: #1db954;
+	box-shadow: 0 0 6px #1db954;
+	animation: pulseDot 1.8s ease infinite;
+	flex-shrink: 0;
+}
+
+@keyframes pulseDot {
+
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	50% {
+		opacity: 0.5;
+		transform: scale(0.7);
+	}
+}
+
+.release-today-album {
+	font-size: 0.92rem;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.92);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.2;
+	letter-spacing: 0.01em;
+}
+
+.release-today-artist {
+	font-size: 0.72rem;
+	color: rgba(255, 255, 255, 0.38);
+	white-space: nowrap;
+	font-weight: 400;
+	letter-spacing: 0.02em;
+}
+
+/* Bouton Spotify */
+.release-today-spotify {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: #1db954;
+	color: #000;
+	text-decoration: none;
+	flex-shrink: 0;
+	align-self: center;
+	margin-right: 14px;
+	transition: all 0.2s ease;
+	box-shadow: 0 4px 14px rgba(29, 185, 84, 0.4);
+}
+
+.release-today-spotify:hover {
+	background: #1ed760;
+	transform: scale(1.12);
+	box-shadow: 0 6px 20px rgba(29, 185, 84, 0.6);
+}
+
+/* Reflet en haut de la carte */
+.release-today-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: linear-gradient(90deg,
+			transparent,
+			rgba(255, 255, 255, 0.15),
+			transparent);
+	border-radius: 18px 18px 0 0;
+}
+
+/* Fallback si pas de meta */
+.release-today-fallback {
+	font-size: 0.85rem;
+	color: rgba(255, 255, 255, 0.8);
+	padding: 14px 20px;
+	white-space: nowrap;
+}
+
+/* Multi-sorties : navigation */
+.release-multi-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.release-multi-nav {
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 50%;
+	color: rgba(255, 255, 255, 0.5);
+	width: 28px;
+	height: 28px;
+	font-size: 1rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s;
+	flex-shrink: 0;
+	line-height: 1;
+	padding: 0;
+}
+
+.release-multi-nav:hover {
+	background: rgba(255, 255, 255, 0.16);
+	color: white;
+}
+
+/* Ancien style pill — gardé pour les anniversaires texte */
 .release-pill {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	animation: bannerIn 0.6s ease forwards;
+	gap: 8px;
+	height: 36px;
+	overflow: hidden;
+	flex-shrink: 0;
 }
 
 .release-pill-art {
-	width: 36px;
-	height: 36px;
-	border-radius: 6px;
+	width: 28px;
+	height: 28px;
+	border-radius: 4px;
 	object-fit: cover;
 	flex-shrink: 0;
-	opacity: 0.9;
+	opacity: 0.85;
 }
 
 .release-pill-text {
 	display: flex;
 	flex-direction: column;
+	justify-content: center;
 	gap: 1px;
 	min-width: 0;
+	height: 100%;
 }
 
 .release-pill-name {
-	font-size: 0.88rem;
+	font-size: 0.78rem;
 	font-weight: 500;
 	color: rgba(255, 255, 255, 0.85);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	max-width: 260px;
+	max-width: 240px;
+	line-height: 1.2;
 }
 
 .release-pill-artist {
-	font-size: 0.72rem;
-	color: rgba(255, 255, 255, 0.38);
+	font-size: 0.65rem;
+	color: rgba(255, 255, 255, 0.35);
 	white-space: nowrap;
+	line-height: 1.2;
 }
 
 .release-pill-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 26px;
-	height: 26px;
+	width: 22px;
+	height: 22px;
 	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	color: rgba(255, 255, 255, 0.6);
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: rgba(255, 255, 255, 0.5);
 	text-decoration: none;
 	flex-shrink: 0;
 	transition: all 0.2s ease;
@@ -58,17 +267,23 @@
 }
 
 .release-pill-btn:hover {
-	background: rgba(255, 255, 255, 0.2);
+	background: rgba(255, 255, 255, 0.18);
 	color: white;
 	border-color: rgba(255, 255, 255, 0.3);
 }
 
 .release-pill-fallback {
-	font-size: 0.88rem;
-	color: rgba(255, 255, 255, 0.85);
+	font-size: 0.82rem;
+	color: rgba(255, 255, 255, 0.8);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 400px;
 }
 
 .release-pill-slot {
 	display: flex;
 	align-items: center;
+	height: 36px;
+	overflow: hidden;
 }
