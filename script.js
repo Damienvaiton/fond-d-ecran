@@ -356,20 +356,48 @@ function toggleStore(user, storeId) {
 
 function getArtistOrder() {
 	try {
-		return JSON.parse(localStorage.getItem("artistOrder")) || null;
+		return (
+			JSON.parse(localStorage.getItem(`artistOrder_${currentUser}`)) || null
+		);
 	} catch {
 		return null;
 	}
 }
 function saveArtistOrder(order) {
-	localStorage.setItem("artistOrder", JSON.stringify(order));
+	localStorage.setItem(`artistOrder_${currentUser}`, JSON.stringify(order));
 }
+function getStoreData(user) {
+	try {
+		return (
+			JSON.parse(localStorage.getItem(`storeData_${user}`)) ||
+			seedStoreData(user)
+		);
+	} catch {
+		return seedStoreData(user);
+	}
+}
+
+function seedStoreData(user) {
+	const seeded = artists.filter((a) => a.profiles.includes(user));
+	saveStoreData(user, seeded);
+	return seeded;
+}
+
+function saveStoreData(user, data) {
+	try {
+		localStorage.setItem(`storeData_${user}`, JSON.stringify(data));
+	} catch (e) {
+		console.warn("[storage] saveStoreData failed:", e);
+	}
+}
+
 function getOrderedArtists() {
+	const data = getStoreData(currentUser);
 	const order = getArtistOrder();
-	if (!order) return [...artists];
-	const map = Object.fromEntries(artists.map((a) => [a.name, a]));
+	if (!order) return [...data];
+	const map = Object.fromEntries(data.map((a) => [a.name, a]));
 	const ordered = order.map((name) => map[name]).filter(Boolean);
-	artists.forEach((a) => {
+	data.forEach((a) => {
 		if (!order.includes(a.name)) ordered.push(a);
 	});
 	return ordered;
@@ -530,11 +558,42 @@ async function loadAllEvents() {
 			console.warn("[events] Impossible de lire customEvents :", e);
 		}
 
-		// 3. Fusionner les deux sources
-		const allGrouped = [...grouped, ...customGrouped];
+		// 3. Fusionner les deux sources en regroupant par artiste
+		//    pour que le rang soit calculé sur la discographie complète
+		const artistMap = new Map();
+		for (const a of grouped) {
+			artistMap.set(a.artist, {
+				artist: a.artist,
+				profiles: a.profiles,
+				discography: [...a.discography],
+			});
+		}
+		for (const a of customGrouped) {
+			if (artistMap.has(a.artist)) {
+				// Fusionner la discographie custom dans l'entrée existante
+				const existing = artistMap.get(a.artist);
+				for (const rel of a.discography) {
+					const duplicate = existing.discography.some(
+						(r) =>
+							r.name === rel.name &&
+							r.type === rel.type &&
+							r.release_date.year === rel.release_date.year &&
+							r.release_date.month === rel.release_date.month &&
+							r.release_date.day === rel.release_date.day,
+					);
+					if (!duplicate) existing.discography.push(rel);
+				}
+			} else {
+				artistMap.set(a.artist, {
+					artist: a.artist,
+					profiles: a.profiles,
+					discography: [...a.discography],
+				});
+			}
+		}
 
 		// 4. Transformer chaque entrée groupée en événements plats
-		eventsData = allGrouped.flatMap(transformArtistGroupToFlat);
+		eventsData = [...artistMap.values()].flatMap(transformArtistGroupToFlat);
 	} catch (err) {
 		console.error("[events] Impossible de charger events.json :", err);
 		eventsData = [];
@@ -769,7 +828,6 @@ async function checkTsEvents() {
 	// Pas de sortie exacte aujourd'hui → bandeau texte classique
 	const slides = [
 		...todayAnnis.map((e) => ({ text: formatEventText(e, year) })),
-		...upcomingItems.map((u) => ({ text: `${u.label} — ${u.text}` })),
 	];
 
 	if (slides.length === 0) {
@@ -852,9 +910,16 @@ function getNextUpcomingEvent() {
 	const e = futureExact[0];
 	const evDate = new Date(e.year, e.month - 1, e.day);
 	const daysLeft = Math.round((evDate - today) / 86_400_000);
+	// Pour une sortie future : convertir l'imparfait "sortait" en présent "sort"
+	const futureText = e.text
+		.replace(/\s*il y a\s*\{n\}\s*ans?/gi, "")
+		.replace(/\s*\{n\}\s*ans?/gi, "")
+		.replace(/\bsortait\b/g, "sort")
+		.replace(/\s{2,}/g, " ")
+		.trim();
 	return {
 		daysLeft,
-		text: formatEventText(e, e.year),
+		text: futureText,
 		date: evDate,
 	};
 }
@@ -912,7 +977,7 @@ function renderCountdown() {
 	`;
 
 	const clockWrapper = document.getElementById("clock-wrapper");
-	if (clockWrapper?.parentNode) clockWrapper.after(el);
+	if (clockWrapper) clockWrapper.appendChild(el);
 }
 
 // ---------------------------------------------------------------------------
@@ -1818,6 +1883,118 @@ function renderArtistsConfig() {
 	if (!list || !currentUser) return;
 	list.innerHTML = "";
 
+	// ── Formulaire "Ajouter un artiste" (toujours visible) ──
+	const addArtistWrap = document.createElement("div");
+	addArtistWrap.className = "artists-config-add-artist-wrap";
+
+	const addArtistTitle = document.createElement("div");
+	addArtistTitle.className = "artists-config-category";
+	addArtistTitle.textContent = "Nouvel artiste";
+	addArtistWrap.appendChild(addArtistTitle);
+
+	const addArtistForm = document.createElement("div");
+	addArtistForm.className = "artists-config-store-row artists-config-add-form";
+	addArtistForm.style.flexWrap = "wrap";
+	addArtistForm.style.gap = "6px";
+	addArtistForm.style.padding = "6px 0 12px";
+
+	const newNameInput = document.createElement("input");
+	newNameInput.type = "text";
+	newNameInput.placeholder = "Nom de l'artiste";
+	newNameInput.className = "event-form-input";
+	newNameInput.style.flex = "1";
+	newNameInput.style.minWidth = "120px";
+
+	const newInitialsInput = document.createElement("input");
+	newInitialsInput.type = "text";
+	newInitialsInput.placeholder = "XX";
+	newInitialsInput.className = "event-form-input";
+	newInitialsInput.maxLength = 2;
+	newInitialsInput.style.width = "48px";
+
+	const newCatOptions = [
+		["store", "Store"],
+		["autres", "Autres"],
+	];
+	let newCatValue = "store";
+
+	const newCatWrap = document.createElement("div");
+	newCatWrap.className = "event-form-month-wrap";
+	newCatWrap.style.position = "relative";
+
+	const newCatTrigger = document.createElement("button");
+	newCatTrigger.type = "button";
+	newCatTrigger.className = "event-form-month-trigger";
+	newCatTrigger.style.whiteSpace = "nowrap";
+	newCatTrigger.innerHTML = `<span class="month-text">Store</span><span class="trigger-arrow">▾</span>`;
+
+	const newCatList = document.createElement("div");
+	newCatList.className = "event-form-month-list";
+	newCatList.style.minWidth = "90px";
+	newCatList.style.zIndex = "300";
+	newCatList.style.top = "100%";
+	newCatList.style.bottom = "auto";
+
+	newCatOptions.forEach(([val, lbl]) => {
+		const opt = document.createElement("div");
+		opt.className = "event-form-month-option";
+		opt.textContent = lbl;
+		opt.addEventListener("mousedown", (e) => {
+			e.preventDefault();
+			newCatValue = val;
+			newCatTrigger.querySelector(".month-text").textContent = lbl;
+			newCatList
+				.querySelectorAll(".event-form-month-option")
+				.forEach((o) => o.classList.remove("selected"));
+			opt.classList.add("selected");
+			newCatWrap.classList.remove("open");
+		});
+		newCatList.appendChild(opt);
+	});
+
+	newCatTrigger.addEventListener("click", (e) => {
+		e.stopPropagation();
+		newCatWrap.classList.toggle("open");
+	});
+
+	newCatWrap.append(newCatTrigger, newCatList);
+
+	const newArtistConfirm = document.createElement("button");
+	newArtistConfirm.className = "artists-config-add-artist-btn";
+	newArtistConfirm.textContent = "+ Ajouter";
+
+	newArtistConfirm.addEventListener("click", () => {
+		const name = newNameInput.value.trim();
+		const initials = newInitialsInput.value.trim().toUpperCase();
+		const category = newCatValue;
+		if (!name || !initials) return;
+		const data = getStoreData(currentUser);
+		if (data.find((a) => a.name === name)) return; // doublon
+		data.push({
+			name,
+			initials,
+			category,
+			profiles: [currentUser],
+			stores: [],
+		});
+		saveStoreData(currentUser, data);
+		newNameInput.value = "";
+		newInitialsInput.value = "";
+		renderArtistsConfig();
+		renderArtistStores();
+	});
+
+	addArtistForm.append(
+		newNameInput,
+		newInitialsInput,
+		newCatWrap,
+		newArtistConfirm,
+	);
+	addArtistWrap.appendChild(addArtistForm);
+
+	list.appendChild(addArtistWrap);
+
+	// ── Liste des artistes ──
 	const ordered = getOrderedArtists();
 	const categories = {};
 	const catOrder = [];
@@ -1869,11 +2046,11 @@ function renderArtistsConfig() {
 			initBadge.textContent = artist.initials;
 			applyArtistPhoto(initBadge, artist);
 
-			const artistName = document.createElement("span");
-			artistName.className = "artists-config-name";
-			artistName.textContent = artist.name;
+			const artistNameEl = document.createElement("span");
+			artistNameEl.className = "artists-config-name";
+			artistNameEl.textContent = artist.name;
 
-			artistInfo.append(dragHandle, initBadge, artistName);
+			artistInfo.append(dragHandle, initBadge, artistNameEl);
 
 			// Toggle maître
 			const masterToggle = document.createElement("label");
@@ -1908,7 +2085,24 @@ function renderArtistsConfig() {
 			expandBtn.textContent = "▸";
 			expandBtn.title = "Voir les stores";
 
-			artistHeader.append(artistInfo, masterToggle, expandBtn);
+			// ── Bouton supprimer artiste ──
+			const deleteArtistBtn = document.createElement("button");
+			deleteArtistBtn.className = "artists-config-expand";
+			deleteArtistBtn.textContent = "🗑";
+			deleteArtistBtn.title = "Supprimer cet artiste";
+			deleteArtistBtn.style.marginLeft = "4px";
+			deleteArtistBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				if (!confirm(`Supprimer l'artiste "${artist.name}" ?`)) return;
+				const data = getStoreData(currentUser).filter(
+					(a) => a.name !== artist.name,
+				);
+				saveStoreData(currentUser, data);
+				renderArtistsConfig();
+				renderArtistStores();
+			});
+
+			artistHeader.append(artistInfo, masterToggle, expandBtn, deleteArtistBtn);
 			artistBlock.appendChild(artistHeader);
 
 			// Liste des stores
@@ -1937,9 +2131,125 @@ function renderArtistsConfig() {
 					renderArtistsConfig();
 					renderArtistStores();
 				});
-				storeRow.append(storeLabel, storeToggle);
+
+				// ── Bouton supprimer store ──
+				const deleteStoreBtn = document.createElement("button");
+				deleteStoreBtn.textContent = "🗑";
+				deleteStoreBtn.title = "Supprimer ce store";
+				deleteStoreBtn.className = "artists-config-expand";
+				deleteStoreBtn.style.marginLeft = "4px";
+				deleteStoreBtn.addEventListener("click", () => {
+					const data = getStoreData(currentUser);
+					const a = data.find((x) => x.name === artist.name);
+					if (!a) return;
+					a.stores = a.stores.filter((s) => s.id !== store.id);
+					// Retirer du disabled si présent
+					const disabled = getDisabledStores(currentUser).filter(
+						(id) => id !== store.id,
+					);
+					saveDisabledStores(currentUser, disabled);
+					saveStoreData(currentUser, data);
+					renderArtistsConfig();
+					renderArtistStores();
+				});
+
+				storeRow.append(storeLabel, storeToggle, deleteStoreBtn);
 				storeList.appendChild(storeRow);
 			});
+
+			// ── Formulaire "Ajouter un store" ──
+			const addStoreRow = document.createElement("div");
+			addStoreRow.className = "artists-config-store-row";
+			addStoreRow.style.flexWrap = "wrap";
+			addStoreRow.style.gap = "6px";
+			addStoreRow.style.paddingTop = "6px";
+
+			const addStoreTrigger = document.createElement("button");
+			addStoreTrigger.className = "artists-config-add-artist-btn";
+			addStoreTrigger.textContent = "+ Ajouter un store";
+			addStoreTrigger.style.width = "100%";
+			addStoreTrigger.style.marginBottom = "4px";
+
+			const addStoreForm = document.createElement("div");
+			addStoreForm.className = "hidden";
+			addStoreForm.style.display = "flex";
+			addStoreForm.style.flexWrap = "wrap";
+			addStoreForm.style.gap = "6px";
+			addStoreForm.style.width = "100%";
+
+			const storeLabelInput = document.createElement("input");
+			storeLabelInput.type = "text";
+			storeLabelInput.placeholder = "Label (ex: Store France)";
+			storeLabelInput.className = "event-form-input";
+			storeLabelInput.style.flex = "1";
+			storeLabelInput.style.minWidth = "100px";
+
+			const storeUrlInput = document.createElement("input");
+			storeUrlInput.type = "text";
+			storeUrlInput.placeholder = "URL";
+			storeUrlInput.className = "event-form-input";
+			storeUrlInput.style.flex = "2";
+			storeUrlInput.style.minWidth = "140px";
+
+			function inferFlag(url) {
+				try {
+					const h = new URL(url).hostname;
+					if (h.includes(".fr") || h.includes("-fr.") || h.includes("/fr"))
+						return "fr";
+					if (
+						h.includes(".co.uk") ||
+						h.includes("-uk.") ||
+						h.endsWith(".uk") ||
+						h.includes("shopuk")
+					)
+						return "uk";
+					if (h.includes(".de") || h.includes("-de.") || h.includes("storede"))
+						return "de";
+					if (h.includes(".eu") || h.includes("-eu.") || h.includes("storeeu"))
+						return "eu";
+					if (h.includes(".dk")) return "dk";
+				} catch {}
+				return "web";
+			}
+
+			const addStoreConfirm = document.createElement("button");
+			addStoreConfirm.className = "artists-config-add-artist-btn";
+			addStoreConfirm.textContent = "+ Ajouter";
+
+			addStoreConfirm.addEventListener("click", () => {
+				const label = storeLabelInput.value.trim();
+				let url = storeUrlInput.value.trim();
+				if (!label || !url) return;
+				if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+				const flag = inferFlag(url);
+				const id = `${artist.name.toLowerCase().replace(/\s/g, "_")}_${Date.now()}`;
+				const data = getStoreData(currentUser);
+				const a = data.find((x) => x.name === artist.name);
+				if (!a) return;
+				a.stores.push({ id, label, flag, url });
+				saveStoreData(currentUser, data);
+				storeLabelInput.value = "";
+				storeUrlInput.value = "";
+				addStoreForm.classList.add("hidden");
+				renderArtistsConfig();
+				renderArtistStores();
+			});
+
+			addStoreForm.append(storeLabelInput, storeUrlInput, addStoreConfirm);
+
+			addStoreTrigger.addEventListener("click", (e) => {
+				e.stopPropagation();
+				addStoreForm.classList.toggle("hidden");
+				if (!addStoreForm.classList.contains("hidden")) {
+					addStoreForm.style.display = "flex";
+					storeLabelInput.focus();
+				} else {
+					addStoreForm.style.display = "";
+				}
+			});
+
+			addStoreRow.append(addStoreTrigger, addStoreForm);
+			storeList.appendChild(addStoreRow);
 
 			expandBtn.addEventListener("click", () => {
 				const hidden = storeList.classList.toggle("hidden");
@@ -2641,6 +2951,7 @@ function initAddEventModal() {
 			list.querySelectorAll(".event-form-artist-option").forEach((o) => {
 				o.classList.toggle("selected", o.dataset.name === a.name);
 			});
+			subPanel.classList.add("hidden");
 		}
 	}
 
