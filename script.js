@@ -301,6 +301,24 @@ function safeHostname(url) {
 	}
 }
 
+/**
+ * Échappe une chaîne avant de l'injecter via innerHTML (noms saisis par
+ * l'utilisateur, données de l'API iTunes, textes d'événements…).
+ */
+function escapeHtml(str) {
+	return String(str ?? "")
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+/** Date locale au format AAAA-MM-JJ (toISOString renvoie la date UTC). */
+function localDateKey(d = new Date()) {
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // ---------------------------------------------------------------------------
 // LOCALSTORAGE HELPERS
 // ---------------------------------------------------------------------------
@@ -409,6 +427,8 @@ function saveStoreData(user, data) {
 }
 
 function getOrderedArtists() {
+	// Sans profil chargé, getStoreData(null) écrirait une clé "storeData_null" vide
+	if (!currentUser) return [];
 	const data = getStoreData(currentUser);
 	const order = getArtistOrder();
 	if (!order) return [...data];
@@ -553,6 +573,7 @@ function transformArtistGroupToFlat(artistGroup) {
 			year: release.release_date.year,
 			text,
 			artistName, // stocké directement pour éviter une recherche textuelle fragile dans buildReleaseCard
+			releaseName: release.name,
 			profiles: artistProfiles,
 		});
 	}
@@ -589,6 +610,7 @@ function mergeGroupedEvents(base, custom) {
 					(r) =>
 						r.name === rel.name &&
 						r.type === rel.type &&
+						(r.label || null) === (rel.label || null) &&
 						r.release_date.year === rel.release_date.year &&
 						r.release_date.month === rel.release_date.month &&
 						r.release_date.day === rel.release_date.day,
@@ -669,7 +691,7 @@ function formatEventText(event, currentYear) {
 // ---------------------------------------------------------------------------
 
 function getReleaseCache(query) {
-	const today = new Date().toISOString().slice(0, 10);
+	const today = localDateKey();
 	const key = `releaseCache_${today}_${query}`;
 	try {
 		const raw = localStorage.getItem(key);
@@ -680,7 +702,7 @@ function getReleaseCache(query) {
 }
 
 function setReleaseCache(query, data) {
-	const today = new Date().toISOString().slice(0, 10);
+	const today = localDateKey();
 	const key = `releaseCache_${today}_${query}`;
 	// Nettoyage des caches des jours précédents
 	Object.keys(localStorage)
@@ -730,8 +752,9 @@ async function fetchSpotifyMeta(artistName, albumName) {
 	}
 }
 
-// Extrait le nom de l'album depuis le texte de l'event (entre guillemets ou après "album ")
+// Nom de la sortie : stocké dans l'event plat ; repli sur une extraction depuis le texte
 function extractAlbumQuery(event) {
+	if (event.releaseName) return event.releaseName;
 	// Cherche entre guillemets typographiques ou droits
 	const quoted = event.text.match(/[«"""]([^»"""]+)[»"""]/);
 	if (quoted) return quoted[1];
@@ -764,18 +787,18 @@ async function buildReleaseCard(event) {
 
 	if (meta) {
 		el.innerHTML = `
-			<img class="release-today-art" src="${meta.artwork}" alt="">
+			<img class="release-today-art" src="${escapeHtml(meta.artwork)}" alt="">
 			<div class="release-today-body">
 				<span class="release-today-badge">Sortie aujourd'hui</span>
-				<span class="release-today-album">${meta.collectionName}</span>
-				<span class="release-today-artist">${meta.artistName}</span>
+				<span class="release-today-album">${escapeHtml(meta.collectionName)}</span>
+				<span class="release-today-artist">${escapeHtml(meta.artistName)}</span>
 			</div>
-			<a class="release-today-spotify" href="${meta.spotifyUrl}" target="_blank" title="Écouter sur Spotify">
+			<a class="release-today-spotify" href="${escapeHtml(meta.spotifyUrl)}" target="_blank" title="Écouter sur Spotify">
 				${spotifyIcon}
 			</a>
 		`;
 	} else {
-		el.innerHTML = `<span class="release-today-fallback">${text}</span>`;
+		el.innerHTML = `<span class="release-today-fallback">${escapeHtml(text)}</span>`;
 	}
 	return el;
 }
@@ -889,7 +912,7 @@ async function checkTsEvents() {
 	if (slides.length === 1) {
 		clearInterval(bannerInterval);
 		bannerInterval = null;
-		banner.innerHTML = `<span>${slides[0].text}</span>`;
+		banner.innerHTML = `<span>${escapeHtml(slides[0].text)}</span>`;
 		banner.classList.remove("hidden");
 		return;
 	}
@@ -908,7 +931,7 @@ async function checkTsEvents() {
 		banner.innerHTML = `
 			<button class="banner-nav banner-prev" title="Précédent">‹</button>
 			<div class="banner-slide-content">
-				<span>${text}</span>
+				<span>${escapeHtml(text)}</span>
 				<div class="banner-dots">${dots}</div>
 			</div>
 			<button class="banner-nav banner-next" title="Suivant">›</button>
@@ -1026,7 +1049,7 @@ function renderCountdown() {
 	el.innerHTML = `
 		<div class="cd-days">${label}</div>
 		<div class="cd-sep"></div>
-		<div class="cd-text">${ev.text.trim()}</div>
+		<div class="cd-text">${escapeHtml(ev.text.trim())}</div>
 	`;
 
 	const clockWrapper = document.getElementById("clock-wrapper");
@@ -1191,7 +1214,11 @@ function initUserSelector() {
 
 let dragSrc = null;
 
-function initDragDrop(container, user) {
+// Appelé une seule fois : le conteneur #shortcuts est persistant, seuls ses enfants
+// sont recréés par renderShortcuts. (Auparavant les écouteurs s'empilaient à chaque
+// rendu et un même drop était rejoué N fois, ce qui mélangeait l'ordre.)
+function initDragDrop() {
+	const container = document.getElementById("shortcuts");
 	container.addEventListener("dragstart", (e) => {
 		dragSrc = e.target.closest(".shortcut-item");
 		if (!dragSrc) return;
@@ -1217,15 +1244,16 @@ function initDragDrop(container, user) {
 	container.addEventListener("drop", (e) => {
 		e.preventDefault();
 		const target = e.target.closest(".shortcut-item");
-		if (!target || target === dragSrc) return;
+		if (!dragSrc || !target || target === dragSrc || !currentUser) return;
 		const items = [...container.querySelectorAll(".shortcut-item")];
 		const fromIdx = items.indexOf(dragSrc);
 		const toIdx = items.indexOf(target);
-		const shortcuts = getShortcuts(user);
+		if (fromIdx === -1 || toIdx === -1) return;
+		const shortcuts = getShortcuts(currentUser);
 		const [moved] = shortcuts.splice(fromIdx, 1);
 		shortcuts.splice(toIdx, 0, moved);
-		saveShortcuts(user, shortcuts);
-		renderShortcuts(user);
+		saveShortcuts(currentUser, shortcuts);
+		renderShortcuts(currentUser);
 	});
 }
 
@@ -1259,7 +1287,7 @@ function renderShortcuts(user) {
 			el.href = s.url;
 			el.draggable = true;
 			el.dataset.index = i;
-			el.innerHTML = `<div class="icon-wrapper"><img src="${icon}"></div><span>${s.name}</span>`;
+			el.innerHTML = `<div class="icon-wrapper"><img src="${icon}"></div><span>${escapeHtml(s.name)}</span>`;
 
 			const removeBtn = document.createElement("button");
 			removeBtn.className = "shortcut-remove";
@@ -1284,8 +1312,6 @@ function renderShortcuts(user) {
 		el.style.animationDelay = `${i * 0.08}s`;
 		container.appendChild(el);
 	});
-
-	initDragDrop(container, user);
 }
 
 // ---------------------------------------------------------------------------
@@ -1299,7 +1325,7 @@ function createFolderItem(folder, index, user) {
 	item.className = "shortcut-item folder-item";
 	item.draggable = true;
 	item.dataset.index = index;
-	item.innerHTML = `<div class="icon-wrapper folder-icon-wrapper"><span class="folder-emoji">📁</span></div><span>${folder.name}</span>`;
+	item.innerHTML = `<div class="icon-wrapper folder-icon-wrapper"><span class="folder-emoji">📁</span></div><span>${escapeHtml(folder.name)}</span>`;
 
 	const removeBtn = document.createElement("button");
 	removeBtn.className = "shortcut-remove";
@@ -1340,7 +1366,7 @@ function toggleFolderPopup(folder, index, anchorEl, user) {
 
 	const header = document.createElement("div");
 	header.className = "folder-popup-header";
-	header.innerHTML = `<span class="folder-popup-title">📁 ${folder.name}</span>`;
+	header.innerHTML = `<span class="folder-popup-title">📁 ${escapeHtml(folder.name)}</span>`;
 
 	const addBtn = document.createElement("button");
 	addBtn.className = "folder-popup-add";
@@ -1361,7 +1387,7 @@ function toggleFolderPopup(folder, index, anchorEl, user) {
 		const row = document.createElement("a");
 		row.className = "folder-popup-link";
 		row.href = link.url;
-		row.innerHTML = `<img src="${icon}" class="folder-link-icon"><span>${link.name}</span>`;
+		row.innerHTML = `<img src="${icon}" class="folder-link-icon"><span>${escapeHtml(link.name)}</span>`;
 
 		const del = document.createElement("button");
 		del.className = "folder-link-remove";
@@ -1373,7 +1399,13 @@ function toggleFolderPopup(folder, index, anchorEl, user) {
 			shortcuts[index].links.splice(li, 1);
 			saveShortcuts(user, shortcuts);
 			renderShortcuts(user);
-			toggleFolderPopup(shortcuts[index], index, anchorEl, user);
+			// Ré-ouvrir le popup : remettre l'index à null (sinon toggle le ferme)
+			// et repartir du nouvel élément dossier (l'ancien a été retiré du DOM)
+			openFolderIndex = null;
+			const folderEl = document.querySelector(
+				`.folder-item[data-index="${index}"]`,
+			);
+			if (folderEl) toggleFolderPopup(shortcuts[index], index, folderEl, user);
 		});
 		row.appendChild(del);
 		popup.appendChild(row);
@@ -1736,6 +1768,7 @@ function initConfigModal() {
 			saveEventsFilter(currentUser, e.target.checked);
 			clearInterval(bannerInterval);
 			checkTsEvents();
+			renderCountdown();
 		});
 
 	modal.querySelector(".config-tabs").addEventListener("click", (e) => {
@@ -1879,7 +1912,7 @@ function renderArtistStores() {
 
 			const header = document.createElement("div");
 			header.className = "dropdown-header";
-			header.innerHTML = `<span class="dropdown-title">${artist.name}</span>`;
+			header.innerHTML = `<span class="dropdown-title">${escapeHtml(artist.name)}</span>`;
 
 			const openAllBtn = document.createElement("button");
 			openAllBtn.className = "open-all-btn";
@@ -1897,8 +1930,8 @@ function renderArtistStores() {
 				link.href = store.url;
 				link.target = "_blank";
 				link.innerHTML = `
-					<img src="imgs/flags/${store.flag}.png" class="store-flag" alt="${store.flag}">
-					<span class="store-label">${store.label}</span>
+					<img src="imgs/flags/${escapeHtml(store.flag)}.png" class="store-flag" alt="${escapeHtml(store.flag)}">
+					<span class="store-label">${escapeHtml(store.label)}</span>
 					<span class="store-arrow">→</span>
 				`;
 				link.addEventListener("click", (e) => e.stopPropagation());
@@ -2161,7 +2194,7 @@ function renderArtistsConfig() {
 
 				const storeLabel = document.createElement("span");
 				storeLabel.className = "artists-config-store-label";
-				storeLabel.innerHTML = `<img src="imgs/flags/${store.flag}.png" class="store-flag-mini" alt=""> ${store.label}`;
+				storeLabel.innerHTML = `<img src="imgs/flags/${escapeHtml(store.flag)}.png" class="store-flag-mini" alt=""> ${escapeHtml(store.label)}`;
 
 				const storeToggle = document.createElement("label");
 				storeToggle.className = "toggle-switch toggle-switch-sm";
@@ -2218,7 +2251,7 @@ function renderArtistsConfig() {
 
 			const addStoreForm = document.createElement("div");
 			addStoreForm.className = "hidden";
-			addStoreForm.style.display = "flex";
+			addStoreForm.style.display = "flex"; // masqué par .hidden (display:none !important)
 			addStoreForm.style.flexWrap = "wrap";
 			addStoreForm.style.gap = "6px";
 			addStoreForm.style.width = "100%";
@@ -2239,21 +2272,18 @@ function renderArtistsConfig() {
 
 			function inferFlag(url) {
 				try {
-					const h = new URL(url).hostname;
-					if (h.includes(".fr") || h.includes("-fr.") || h.includes("/fr"))
-						return "fr";
-					if (
-						h.includes(".co.uk") ||
-						h.includes("-uk.") ||
-						h.endsWith(".uk") ||
-						h.includes("shopuk")
-					)
-						return "uk";
-					if (h.includes(".de") || h.includes("-de.") || h.includes("storede"))
-						return "de";
-					if (h.includes(".eu") || h.includes("-eu.") || h.includes("storeeu"))
-						return "eu";
-					if (h.includes(".dk")) return "dk";
+					// Comparaison par segments du hostname (pas par sous-chaîne : ".de"
+					// matchait "deadmau5.com", ".fr" matchait "francais.com"…)
+					const h = new URL(url).hostname.toLowerCase();
+					const parts = h.split(/[.-]/);
+					const has = (code, ...prefixes) =>
+						parts.includes(code) ||
+						prefixes.some((p) => parts.includes(p + code));
+					if (has("fr", "store", "shop")) return "fr";
+					if (has("uk", "store", "shop")) return "uk";
+					if (has("de", "store", "shop")) return "de";
+					if (has("eu", "store", "shop")) return "eu";
+					if (has("dk", "store", "shop")) return "dk";
 				} catch {}
 				return "web";
 			}
@@ -2286,12 +2316,7 @@ function renderArtistsConfig() {
 			addStoreTrigger.addEventListener("click", (e) => {
 				e.stopPropagation();
 				addStoreForm.classList.toggle("hidden");
-				if (!addStoreForm.classList.contains("hidden")) {
-					addStoreForm.style.display = "flex";
-					storeLabelInput.focus();
-				} else {
-					addStoreForm.style.display = "";
-				}
+				if (!addStoreForm.classList.contains("hidden")) storeLabelInput.focus();
 			});
 
 			addStoreRow.append(addStoreTrigger, addStoreForm);
@@ -2534,13 +2559,6 @@ function initSearchHistory() {
 
 	let activeIndex = -1;
 
-	function escapeHtml(str) {
-		return str
-			.replace(/&/g, "&amp;")
-			.replace(/</g, "&lt;")
-			.replace(/>/g, "&gt;");
-	}
-
 	function renderDropdown(filter = "") {
 		const history = getSearchHistory().filter((h) =>
 			h.toLowerCase().includes(filter.toLowerCase()),
@@ -2552,7 +2570,7 @@ function initSearchHistory() {
 		dropdown.innerHTML = "";
 		activeIndex = -1;
 
-		history.forEach((query, i) => {
+		history.forEach((query) => {
 			const item = document.createElement("div");
 			item.className = "search-history-item";
 
@@ -2580,9 +2598,15 @@ function initSearchHistory() {
 			del.className = "search-history-delete";
 			del.innerHTML = "✕";
 			del.title = "Supprimer";
+			// mousedown est intercepté ici, sinon il remonte à l'item et lance la recherche
+			del.addEventListener("mousedown", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+			});
 			del.addEventListener("click", (e) => {
 				e.stopPropagation();
-				saveSearchHistory(getSearchHistory().filter((_, idx) => idx !== i));
+				// Filtrer par valeur : l'index affiché est celui de la liste filtrée
+				saveSearchHistory(getSearchHistory().filter((h) => h !== query));
 				renderDropdown(input.value);
 			});
 
@@ -2591,7 +2615,8 @@ function initSearchHistory() {
 				e.preventDefault();
 				input.value = query;
 				closeDropdown();
-				form.submit();
+				// requestSubmit déclenche l'événement submit (et donc la mise à jour de l'historique)
+				form.requestSubmit();
 			});
 			dropdown.appendChild(item);
 		});
@@ -2982,12 +3007,6 @@ function initAddEventModal() {
 		dateField.appendChild(dateRow);
 		formEl.appendChild(dateField);
 
-		// Close dropdowns on outside click (within modal)
-		modal.addEventListener("click", () => {
-			artistDdWrap.classList.remove("open");
-			monthWrap.classList.remove("open");
-		});
-
 		function selectArtist(a) {
 			selectedArtist = a;
 			trigger.querySelector(".trigger-text").textContent = a.name;
@@ -3017,8 +3036,13 @@ function initAddEventModal() {
 	document.getElementById("add-event-cancel").addEventListener("click", () => {
 		modal.classList.add("hidden");
 	});
+	// Un seul écouteur (buildForm en ajoutait un nouveau à chaque ouverture)
 	modal.addEventListener("click", (e) => {
 		if (e.target === modal) modal.classList.add("hidden");
+		// Fermer les dropdowns ouverts sur clic ailleurs dans la modal
+		modal
+			.querySelectorAll(".event-form-artist-dropdown, .event-form-month-wrap")
+			.forEach((el) => el.classList.remove("open"));
 	});
 
 	// Confirm
@@ -3037,10 +3061,18 @@ function initAddEventModal() {
 			// Validate
 			let valid = true;
 
+			const flagError = (el) => {
+				if (!el) return;
+				el.classList.add("error");
+				setTimeout(() => el.classList.remove("error"), 1500);
+			};
+
 			if (!selectedArtist) {
+				flagError(document.querySelector(".event-form-artist-trigger"));
 				valid = false;
 			}
 			if (!selectedType) {
+				flagError(document.querySelector(".event-form-type-toggle"));
 				valid = false;
 			}
 			if (!nameVal) {
@@ -3074,6 +3106,14 @@ function initAddEventModal() {
 					el.classList.add("error");
 					setTimeout(() => el.classList.remove("error"), 1500);
 				}
+				valid = false;
+			}
+			// Date inexistante (ex : 31/02) : new Date la ferait déborder sur le mois suivant
+			if (
+				valid &&
+				new Date(yearVal, selectedMonth - 1, dayVal).getDate() !== dayVal
+			) {
+				flagError(document.getElementById("event-form-day"));
 				valid = false;
 			}
 			if (!valid) return;
@@ -3129,6 +3169,7 @@ window.onload = async () => {
 	initContextMenu();
 	initEditShortcutModal();
 	initFolderModal();
+	initDragDrop();
 
 	// Chargement des événements depuis events.json (source unique)
 	await loadAllEvents();

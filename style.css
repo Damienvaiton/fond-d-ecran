@@ -1,6 +1,13 @@
 @font-face {
     font-family: 'Eras Tour Font';
-    src: url('.imgs/OPTIPirogi-Roman.otf') format('opentype');
+    src: url('imgs/OPTIPirogi-Roman.otf') format('opentype');
+}
+
+/* Classe utilitaire générique : plusieurs éléments (liste des stores en config,
+   formulaire d'ajout de store, zone de dépôt Lens) n'avaient pas de règle
+   ".hidden" dédiée et restaient visibles. */
+.hidden {
+    display: none !important;
 }
 
 body,
@@ -2014,8 +2021,15 @@ html {
     color: rgba(255, 255, 255, 0.25);
 }
 
-.event-form-input.error {
+.event-form-input.error,
+.event-form-artist-trigger.error,
+.event-form-month-trigger.error {
     border-color: rgba(255, 80, 80, 0.7);
+}
+
+.event-form-type-toggle.error {
+    outline: 1px solid rgba(255, 80, 80, 0.7);
+    border-radius: 10px;
 }
 
 /* Date row */
