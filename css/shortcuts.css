@@ -1,0 +1,245 @@
+/* =========================================================================
+   Raccourcis, dossiers, menu contextuel
+   ========================================================================= */
+
+.shortcuts {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 25px;
+	max-width: 900px;
+}
+
+.shortcut-item {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	color: white;
+	text-decoration: none;
+	cursor: grab;
+	opacity: 0;
+	animation: fadeInUp 0.5s ease forwards;
+	transition: transform 0.3s ease;
+}
+
+.shortcut-item:hover,
+.shortcut-item:focus-visible {
+	transform: translateY(-5px);
+	outline: none;
+}
+
+.shortcut-item.dragging {
+	opacity: 0.4;
+	cursor: grabbing;
+}
+
+.shortcut-item.drag-over {
+	transform: scale(1.1);
+}
+
+.shortcut-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	margin-bottom: 8px;
+	padding: 15px;
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	border-radius: 20px;
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+}
+
+.shortcut-item:focus-visible .shortcut-icon {
+	border-color: var(--border-strong);
+}
+
+.shortcut-icon img {
+	width: 32px;
+	height: 32px;
+}
+
+.folder-item {
+	cursor: pointer;
+}
+
+.folder-item .shortcut-icon {
+	border-color: rgba(255, 255, 255, 0.12);
+}
+
+.folder-emoji {
+	font-size: 1.8rem;
+	line-height: 1;
+}
+
+.shortcut-label {
+	max-width: 90px;
+	overflow: hidden;
+	font-size: 0.9rem;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.shortcut-remove {
+	position: absolute;
+	top: -6px;
+	right: -6px;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: rgba(255, 60, 60, 0.85);
+	color: white;
+	font-size: 0.65rem;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.2s;
+}
+
+.shortcut-item:hover .shortcut-remove,
+.shortcut-remove:focus-visible {
+	opacity: 1;
+}
+
+/* --- Popup de dossier --------------------------------------------------- */
+
+.folder-popup {
+	min-width: 230px;
+	max-width: 280px;
+}
+
+.folder-popup-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 6px;
+	padding: 6px 10px 10px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.folder-popup-title {
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.folder-popup-add {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 50%;
+	background: var(--glass);
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 1rem;
+	line-height: 1;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.folder-popup-add:hover {
+	background: rgba(255, 255, 255, 0.18);
+	color: white;
+}
+
+.folder-popup-link {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	border-radius: 10px;
+	color: rgba(255, 255, 255, 0.75);
+	font-size: 0.855rem;
+	text-decoration: none;
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+
+.folder-popup-link:hover {
+	background: var(--glass);
+	color: white;
+}
+
+.folder-link-icon {
+	flex-shrink: 0;
+	width: 18px;
+	height: 18px;
+	border-radius: 4px;
+}
+
+.folder-link-remove {
+	position: absolute;
+	right: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: rgba(220, 50, 50, 0.85);
+	color: white;
+	font-size: 0.55rem;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.folder-popup-link:hover .folder-link-remove {
+	opacity: 1;
+}
+
+.folder-popup-empty {
+	padding: 10px 12px;
+	font-size: 0.78rem;
+	text-align: center;
+	color: rgba(255, 255, 255, 0.25);
+}
+
+/* --- Menu contextuel ---------------------------------------------------- */
+
+.context-menu {
+	z-index: 2000;
+	min-width: 160px;
+	padding: 6px;
+	border-radius: 14px;
+}
+
+.context-menu button {
+	display: block;
+	width: 100%;
+	padding: 9px 14px;
+	border: none;
+	border-radius: 9px;
+	background: none;
+	color: rgba(255, 255, 255, 0.8);
+	font-size: 0.88rem;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+
+.context-menu button:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: white;
+}

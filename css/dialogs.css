@@ -1,0 +1,333 @@
+/* =========================================================================
+   Modales : structure commune, configuration, ajout d'événement, Lens
+   ========================================================================= */
+
+.modal {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.8);
+	backdrop-filter: blur(15px);
+}
+
+.modal-content {
+	min-width: 320px;
+	box-sizing: border-box;
+	padding: 36px 40px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 30px;
+	background: rgba(255, 255, 255, 0.05);
+	color: white;
+	text-align: center;
+	animation: popIn 0.18s ease;
+}
+
+.modal-content h2 {
+	margin: 0 0 8px;
+}
+
+.modal-wide {
+	width: 90vw;
+	min-width: 360px;
+	max-width: 440px;
+}
+
+.modal-form {
+	max-height: 90vh;
+	overflow-y: auto;
+	text-align: left;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.modal-form h2 {
+	text-align: center;
+}
+
+.modal-actions {
+	display: flex;
+	justify-content: center;
+	gap: 12px;
+	margin-top: 22px;
+}
+
+.form-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 20px;
+}
+
+/* --- Sélecteur de profil ------------------------------------------------ */
+
+.user-buttons {
+	display: flex;
+	justify-content: center;
+	gap: 15px;
+	margin-top: 20px;
+}
+
+.user-buttons .btn {
+	padding: 12px 25px;
+}
+
+/* --- Configuration ------------------------------------------------------ */
+
+.config-tabs {
+	display: flex;
+	gap: 6px;
+	margin-top: 16px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.config-tab {
+	margin-bottom: -1px;
+	padding: 8px 14px;
+	border: none;
+	border-bottom: 2px solid transparent;
+	background: none;
+	color: rgba(255, 255, 255, 0.4);
+	font-size: 0.82rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.config-tab:hover {
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.config-tab.active {
+	border-bottom-color: white;
+	color: white;
+}
+
+.config-tab-content {
+	margin-top: 18px;
+	text-align: left;
+}
+
+.config-section {
+	margin-top: 20px;
+}
+
+.config-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.config-toggle-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	font-size: 0.85rem;
+	color: rgba(255, 255, 255, 0.7);
+	cursor: pointer;
+}
+
+.config-toggle-row:last-child {
+	border-bottom: none;
+}
+
+/* --- Ajout d'événement ------------------------------------------------- */
+
+.form-field {
+	margin-bottom: 14px;
+}
+
+.sub-panel {
+	margin-top: 10px;
+	padding: 14px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.04);
+	animation: fadeInDown 0.18s ease;
+}
+
+.sub-panel .input {
+	margin-bottom: 10px;
+}
+
+.sub-panel-profiles {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin-bottom: 10px;
+	border-radius: 8px;
+}
+
+.sub-panel-profiles label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.82rem;
+	color: rgba(255, 255, 255, 0.6);
+	cursor: pointer;
+}
+
+.sub-panel-profiles input {
+	accent-color: white;
+	cursor: pointer;
+}
+
+.date-row {
+	display: flex;
+	align-items: stretch;
+	gap: 8px;
+}
+
+.date-row .dropdown {
+	flex: 1;
+}
+
+.date-day {
+	flex-shrink: 0;
+	width: 72px;
+}
+
+.date-year {
+	flex-shrink: 0;
+	width: 90px;
+}
+
+/* --- Google Lens ------------------------------------------------------- */
+
+.lens-modal-content {
+	width: 90vw;
+	min-width: 420px;
+	max-width: 480px;
+	padding: 28px 28px 24px;
+	border-radius: 24px;
+	background: rgba(28, 28, 36, 0.97);
+	text-align: left;
+}
+
+.lens-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20px;
+}
+
+.lens-header h2 {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.9);
+}
+
+.lens-dropzone {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 130px;
+	overflow: hidden;
+	padding: 32px 24px;
+	border: 1.5px dashed rgba(255, 255, 255, 0.2);
+	border-radius: 16px;
+	background: rgba(255, 255, 255, 0.02);
+	text-align: center;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.lens-dropzone:hover,
+.lens-dropzone:focus-visible,
+.lens-dropzone.drag-active {
+	border-color: rgba(255, 255, 255, 0.45);
+	background: rgba(255, 255, 255, 0.05);
+	outline: none;
+}
+
+.lens-drop-inner {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	pointer-events: none;
+}
+
+.lens-drop-icon {
+	color: rgba(255, 255, 255, 0.3);
+}
+
+.lens-drop-text {
+	margin: 0;
+	font-size: 0.9rem;
+	line-height: 1.5;
+	color: var(--text-muted);
+}
+
+.lens-upload-link {
+	color: #6fa8dc;
+	text-decoration: underline;
+}
+
+.lens-preview {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 14px;
+	background: rgba(0, 0, 0, 0.2);
+	cursor: default;
+}
+
+.lens-preview img {
+	max-width: calc(100% - 32px);
+	max-height: 126px;
+	border-radius: 8px;
+	object-fit: contain;
+}
+
+.lens-preview-remove {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	border-radius: 50%;
+	background: rgba(220, 50, 50, 0.9);
+	color: white;
+	font-size: 0.65rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.lens-divider {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin: 18px 0;
+	font-size: 0.78rem;
+	letter-spacing: 0.08em;
+	color: rgba(255, 255, 255, 0.25);
+}
+
+.lens-divider::before,
+.lens-divider::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.lens-url-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}

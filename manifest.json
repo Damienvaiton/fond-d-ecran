@@ -1,12 +1,16 @@
 {
-  "manifest_version": 3,
-  "name": "Custom Background Dashboard",
-  "version": "1.1.0",
-  "description": "Custom background ask by Alex",
-  "chrome_url_overrides": {
-    "newtab": "index.html"
-  },
-  "permissions": [
-    "storage"
-  ]
+	"manifest_version": 3,
+	"name": "Fond d'écran — Nouvel onglet",
+	"version": "2.0.0",
+	"description": "Nouvel onglet personnalisé : fonds d'écran, raccourcis, stores d'artistes et anniversaires de sorties.",
+	"icons": {
+		"16": "assets/icons/icon-16.png",
+		"32": "assets/icons/icon-32.png",
+		"48": "assets/icons/icon-48.png",
+		"128": "assets/icons/icon-128.png"
+	},
+	"chrome_url_overrides": {
+		"newtab": "index.html"
+	},
+	"host_permissions": ["https://itunes.apple.com/*"]
 }

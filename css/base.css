@@ -1,0 +1,202 @@
+/* =========================================================================
+   Base : polices, variables, mise en page générale
+   ========================================================================= */
+
+@font-face {
+	font-family: "Eras Tour";
+	src: url("../assets/fonts/OPTIPirogi-Roman.otf") format("opentype");
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Share Tech Mono";
+	src: url("../assets/fonts/ShareTechMono-Regular.woff2") format("woff2");
+	font-display: swap;
+}
+
+:root {
+	--font-ui: "Segoe UI", system-ui, sans-serif;
+	--font-led: "Share Tech Mono", ui-monospace, monospace;
+	--font-display: "Eras Tour", var(--font-ui);
+
+	--text: rgba(255, 255, 255, 0.85);
+	--text-muted: rgba(255, 255, 255, 0.5);
+	--text-faint: rgba(255, 255, 255, 0.28);
+
+	--glass: rgba(255, 255, 255, 0.08);
+	--glass-hover: rgba(255, 255, 255, 0.16);
+	--border: rgba(255, 255, 255, 0.12);
+	--border-strong: rgba(255, 255, 255, 0.35);
+	--surface: rgba(10, 10, 16, 0.97);
+	--danger: rgba(255, 80, 80, 0.75);
+	--led: #e01010;
+	--led-glow: 0 0 6px #ff2020, 0 0 14px #ff0000, 0 0 28px rgba(255, 0, 0, 0.4);
+
+	--shadow-popup: 0 20px 60px rgba(0, 0, 0, 0.65);
+	--radius: 12px;
+}
+
+/* Utilitaire unique pour masquer un élément */
+.hidden {
+	display: none !important;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
+	font-family: var(--font-ui);
+	background-color: #000;
+	color: var(--text);
+}
+
+button,
+input {
+	font: inherit;
+}
+
+@keyframes fadeInDown {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes popIn {
+	from {
+		opacity: 0;
+		transform: scale(0.94);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* --- Fond --------------------------------------------------------------- */
+
+#bg {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	background-size: cover;
+	background-position: center;
+	opacity: 0;
+	transition: opacity 1s ease-in-out;
+}
+
+#bg.visible {
+	opacity: 1;
+}
+
+#overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1;
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.6));
+}
+
+/* --- Contenu central ------------------------------------------------------ */
+
+.content {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+}
+
+#welcome-msg {
+	margin: 0 0 28px;
+	font-size: 1.6rem;
+	font-weight: 300;
+	letter-spacing: 0.04em;
+	color: var(--text);
+	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+	opacity: 0;
+	animation: fadeInDown 0.8s ease forwards;
+}
+
+#welcome-msg:empty {
+	visibility: hidden;
+}
+
+/* --- Barre d'actions (bas gauche) ---------------------------------------- */
+
+.dock {
+	position: fixed;
+	left: 24px;
+	bottom: 24px;
+	z-index: 100;
+	display: flex;
+	gap: 12px;
+}
+
+.dock-btn {
+	width: 42px;
+	height: 42px;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: var(--glass);
+	backdrop-filter: blur(10px);
+	color: rgba(255, 255, 255, 0.4);
+	font-size: 1.1rem;
+	line-height: 1;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.dock-btn:hover,
+.dock-btn:focus-visible {
+	background: rgba(255, 255, 255, 0.18);
+	border-color: var(--border-strong);
+	color: rgba(255, 255, 255, 0.9);
+}
+
+#switch-profile-btn {
+	font-size: 1.3rem;
+}
+
+#add-shortcut-btn {
+	font-size: 1.5rem;
+}
+
+.dock-btn.spin-180:hover {
+	transform: rotate(180deg);
+}
+
+.dock-btn.spin-90:hover {
+	transform: rotate(90deg);
+}
+
+.dock-btn.spin-60:hover {
+	transform: rotate(60deg);
+}
+
+.dock-btn.grow:hover {
+	transform: scale(1.1);
+}
